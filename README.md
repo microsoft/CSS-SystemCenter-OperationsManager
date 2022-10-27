@@ -1,14 +1,10 @@
-# Project
+![System Center Operations Manager](/media/git-guidance/product/opsmgr_logo.png)
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+![Powershell](/media/git-guidance/language/powershell_logo.png)
 
-As the maintainer of this project, please make a few updates:
-
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+----
+# Introduction 
+This folder contains various Powershell scripts used to troubleshoot System Center Operations Manager issues.
 
 ## Contributing
 

@@ -10693,8 +10693,8 @@ Detected Issues / Best Practices for SCOM
 						$DWDB_MOMData = $SQLDBSizesDWDB | Where-Object { $_.Name -eq 'MOM_DATA' }
 						if ([int]$(($DWDB_MOMData.'FreeSpace(%)').Split(" %")[0]) -lt 6)
 						{
-							Write-Verbose "$(Time-Stamp)Operations Manager Database is nearing full, less than 6% free: $($DWDB_MOMData.'FreeSpace(%)') free space"
-							$script:bestpractice += "Operations Manager Database is nearing full, less than 6% free: $($DWDB_MOMData.'FreeSpace(%)') free space"
+							Write-Verbose "$(Time-Stamp)Operations Manager Data Warehouse Database is nearing full, less than 6% free: $($DWDB_MOMData.'FreeSpace(%)') free space"
+							$script:bestpractice += "Operations Manager Data Warehouse Database is nearing full, less than 6% free: $($DWDB_MOMData.'FreeSpace(%)') free space"
 						}
 						$DWDB_DataDiskDrive = ($DWDB_MOMData.Location).Split(":")[0]
 					}

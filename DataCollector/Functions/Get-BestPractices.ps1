@@ -681,7 +681,7 @@ A high number of dynamic groups detected, this may cause some issues with group 
 
      Overall Dynamic Membership Group Count: $($groupOut.Count)
 
-     $($groupOut | Select DynamicGroupName, DiscoveryName, DynamicExpressionCount, MemberCount | Sort-Object DynamicExpressionCount, MemberCount -Descending | Out-String -Width 2048)
+     $($groupOut | Select DynamicGroupName, DiscoveryName, DynamicExpressionCount, MemberCount | Sort-Object DynamicExpressionCount, MemberCount -Descending | Out-String -Width 4096)
 "@
 					}
 				}
@@ -749,6 +749,7 @@ A high number of dynamic groups detected, this may cause some issues with group 
 					Param ($script,
 						$VerbosePreference)
 					. ([ScriptBlock]::Create($script))
+					<#
 					if ($VerbosePreference.value__ -ne 0)
 					{
 						return Inner-GetBestPractices -Verbose
@@ -757,6 +758,8 @@ A high number of dynamic groups detected, this may cause some issues with group 
 					{
 						return Inner-GetBestPractices
 					}
+					#>
+					return Inner-GetBestPractices
 				}
 				Write-Host "> Completed!`n" -NoNewline -ForegroundColor Green
 			}

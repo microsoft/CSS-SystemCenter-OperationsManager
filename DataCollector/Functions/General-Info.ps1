@@ -56,7 +56,14 @@ function Get-SCOMGeneralInfo
 			. ([ScriptBlock]::Create($ProductVersionScript))
 			Write-Verbose "$(Time-Stamp)Grabbing System Uptime"
 			$Uptime = (($(Get-Date) - $(Get-CimInstance -ClassName Win32_OperatingSystem | Select LastBootUpTime -ExpandProperty LastBootUpTime)) | Select Hours, Minutes, Seconds) | % { Write-Output "$($_.Hours) hour(s), $($_.Minutes) minute(s), $($_.Seconds) second(s)" }
-			
+			try
+			{
+				$winrmConfig = winrm get winrm/config
+			}
+			catch
+			{
+				$winrmConfig = $false
+			}
 			#=======================================================================
 			# Start General Information Gather
 			#=======================================================================
@@ -1091,6 +1098,14 @@ public class OpsMgrSetupRegKey{
 			else
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Certificate Loaded' -Value 'Unable to detect any certificate in registry.'
+			}
+			if ($winrmConfig)
+			{
+				$setupOutput | Add-Member -MemberType NoteProperty -Name 'WinRM Configuration' -Value "$($winrmConfig | Out-String -Width 4096)"
+			}
+			else
+			{
+				$setupOutput | Add-Member -MemberType NoteProperty -Name 'WinRM Configuration' -Value "Unable to gather Configuration."
 			}
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'TLS 1.2 Enforced' -Value $TLS12Enforced
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'Powershell Version' -Value $PSVersion

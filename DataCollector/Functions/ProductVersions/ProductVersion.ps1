@@ -23,7 +23,7 @@ function Get-ProductVersion
        System Center Operations Manager 2022 Versions
     #>
 	
-			'10.22.1032.0'  { "SCOM 2022 RTM - 1.6.10-2 / August 2022" } #SCX Agent
+			'10.22.1032.0'  { "SCOM 2022 RTM - 1.6.10-2	/ August 2022" } #SCX Agent
 			'10.22.1024.0'  { "SCOM 2022 RTM - 1.6.9-2 / August 2022" } #SCX Agent
 			'10.22.1019.0'  { "SCOM 2022 RTM - 1.6.9-0 / August 2022" } #SCX Agent
 			'10.22.10056.0' { "SCOM 2022 RTM / 2022 March 14" } #Agent

@@ -5,6 +5,9 @@
 	.DESCRIPTION
 		For full support, please run this script from a Management Server..
 	
+	.PARAMETER AcceptEula
+		Accept the End User License Agreement. The EULA acceptance state is stored in HKCU (HKCU:\Software\Microsoft\CESDiagnosticTools\SCOM Data Collector EULA Accepted) to prevent multiple popups every time the tool is launched.
+	
 	.PARAMETER AdditionalEventLogs
 		Gather additional Event Logs. (Example: -AdditionalEventLogs Security)
 	
@@ -152,177 +155,181 @@
 		https://github.com/blakedrumm/SCOM-Scripts-and-SQL
 		
 		.VERSION
-		v3.8.14 - October 25th, 2022
+		v3.8.15 - November 3rd, 2022
 #>
 [CmdletBinding()]
 [OutputType([string])]
 param
 (
+	[Parameter(Position = 1,
+			   HelpMessage = 'Accept the End User License Agreement. The EULA acceptance state is stored in HKCU (HKCU:\Software\Microsoft\CESDiagnosticTools\SCOM Data Collector EULA Accepted) to prevent multiple popups every time the tool is launched.')]
+	[Alias('ae')]
+	[switch]$AcceptEula,
 	[Parameter(Mandatory = $false,
-			   Position = 1,
+			   Position = 2,
 			   HelpMessage = 'Gather additional Event Logs. (Example: -AdditionalEventLogs Security)')]
 	[array]$AdditionalEventLogs,
 	[Parameter(Mandatory = $false,
-			   Position = 2,
+			   Position = 3,
 			   HelpMessage = 'Allows you to Specify all the Switches Available for use. (Except: MSInfo32)')]
 	[switch]$All,
 	[Parameter(Mandatory = $false,
-			   Position = 3,
+			   Position = 4,
 			   HelpMessage = 'This will allow you to not be prompted for anything.')]
 	[Alias('yes')]
 	[switch]$AssumeYes,
 	[Parameter(Mandatory = $false,
-			   Position = 4,
+			   Position = 5,
 			   HelpMessage = 'Azure DevOps Build Pipeline switch to output the SDC Results file without any File Date or CaseNumber.',
 			   DontShow = $true)]
 	[Alias('bp')]
 	[switch]$BuildPipeline,
 	[Parameter(Mandatory = $false,
-			   Position = 5,
+			   Position = 6,
 			   HelpMessage = 'Add an Optional Case Number to the Output of the Zip File.')]
 	[Alias('case')]
 	[string]$CaseNumber,
 	[Parameter(Mandatory = $false,
-			   Position = 6,
+			   Position = 7,
 			   HelpMessage = 'Check the Certificates for validity for SCOM use, output in TXT format.')]
 	[Alias('cc')]
 	[switch]$CheckCertificates,
-	[Parameter(Position = 7,
+	[Parameter(Position = 8,
 			   HelpMessage = 'Check the group policy for each server listed in -Servers as well as any Management Servers and SQL Servers.')]
 	[switch]$CheckGroupPolicy,
 	[Parameter(Mandatory = $false,
-			   Position = 8,
+			   Position = 9,
 			   HelpMessage = 'Check SCOM Common Ports against every Management Server in Management Group and SQL Servers, as well as any -Servers listed.')]
 	[switch]$CheckPorts,
 	[Parameter(Mandatory = $false,
-			   Position = 9,
+			   Position = 10,
 			   HelpMessage = 'Check for TLS 1.2 Readiness, output in TXT format.')]
 	[Alias('ct')]
 	[switch]$CheckTLS,
 	[Parameter(Mandatory = $false,
-			   Position = 10,
+			   Position = 11,
 			   HelpMessage = 'Export all Sealed/Unsealed MPs.')]
 	[Alias('em')]
 	[switch]$ExportMPs,
 	[Parameter(Mandatory = $false,
-			   Position = 11,
+			   Position = 12,
 			   HelpMessage = 'Generate a HTML Report Page { EXPERIMENTAL }')]
 	[Alias('html')]
 	[switch]$GenerateHTML,
-	[Parameter(Position = 12,
+	[Parameter(Position = 13,
 			   HelpMessage = 'Gather the Registry / ConfigService.config Configuration of the Management Servers.')]
 	[switch]$GetConfiguration,
 	[Parameter(Mandatory = $false,
-			   Position = 13,
+			   Position = 14,
 			   HelpMessage = 'Gather Event Logs with the localemetadata to ensure that you are able to open the Event log from any machine.')]
 	[Alias('gel')]
 	[switch]$GetEventLogs,
 	[Parameter(Mandatory = $false,
-			   Position = 14,
+			   Position = 15,
 			   HelpMessage = 'Gather software installed from Management Servers / Agents / Gateways.')]
 	[switch]$GetInstalledSoftware,
-	[Parameter(Position = 15)]
+	[Parameter(Position = 16)]
 	[switch]$GetInstallLogs,
 	[Parameter(Mandatory = $false,
-			   Position = 16,
+			   Position = 17,
 			   HelpMessage = 'Get Local Administrators and Logon Rights.')]
 	[Alias('gls')]
 	[switch]$GetLocalSecurity,
 	[Parameter(Mandatory = $false,
-			   Position = 17,
+			   Position = 18,
 			   HelpMessage = 'A description of the GetNotificationSubscriptions parameter.')]
 	[switch]$GetNotificationSubscriptions,
 	[Parameter(Mandatory = $false,
-			   Position = 18,
+			   Position = 19,
 			   HelpMessage = 'A description of the GetRulesAndMonitors parameter.')]
 	[Alias('gram')]
 	[switch]$GetRulesAndMonitors,
 	[Parameter(Mandatory = $false,
-			   Position = 19,
+			   Position = 20,
 			   HelpMessage = 'Get RunAs Accounts that are set on each Management Server.')]
 	[Alias('graa')]
 	[switch]$GetRunAsAccounts,
 	[Parameter(Mandatory = $false,
-			   Position = 20,
+			   Position = 21,
 			   HelpMessage = 'Get SPN Configuration from Active Directory.')]
 	[Alias('gs')]
 	[switch]$GetSPN,
-	[Parameter(Position = 21,
+	[Parameter(Position = 22,
 			   HelpMessage = 'Gathers User Roles and the configurations from SCOM.')]
 	[switch]$GetUserRoles,
 	[Parameter(Mandatory = $false,
-			   Position = 22,
+			   Position = 23,
 			   HelpMessage = 'Gathers Group Policy Results to verify Harmful Policies are not present, Generated in HTML and TXT Format.')]
 	[Alias('gp')]
 	[switch]$GPResult,
 	[Parameter(Mandatory = $false,
-			   Position = 23,
+			   Position = 24,
 			   HelpMessage = 'Pull the least amount of data from SCOM.')]
 	[switch]$LeastAmount,
 	[Parameter(Mandatory = $false,
-			   Position = 24,
+			   Position = 25,
 			   HelpMessage = 'Only run data gathering against the Management Servers specified here.')]
 	[Alias('ms')]
 	[array]$ManagementServers,
 	[Parameter(Mandatory = $false,
-			   Position = 25,
+			   Position = 26,
 			   HelpMessage = 'Export MSInfo32 for viewing in TXT Format.')]
 	[Alias('mi32')]
 	[switch]$MSInfo32,
-	[Parameter(Position = 26,
+	[Parameter(Position = 27,
 			   HelpMessage = 'Internal Script Switch.')]
 	[switch]$NoSQLPermission,
 	[Parameter(Mandatory = $false,
-			   Position = 27,
+			   Position = 28,
 			   HelpMessage = 'Ping every Management Server, including servers mentioned in -Servers switch.')]
 	[switch]$PingAll,
 	[Parameter(Mandatory = $false,
-			   Position = 28,
+			   Position = 29,
 			   HelpMessage = 'Linux/Unix Agents you want to gather data from, via Bash Script that is transmitted via ssh.')]
 	[Alias('LinuxAgents')]
 	[Array]$SCXAgents,
 	[Parameter(Mandatory = $false,
-			   Position = 29,
+			   Position = 30,
 			   HelpMessage = 'The password you would like to use for SCX Agent SSH Authentication.')]
 	[Alias('LinuxPassword')]
 	[string]$SCXPassword,
 	[Parameter(Mandatory = $false,
-			   Position = 30,
+			   Position = 31,
 			   HelpMessage = 'The username you would like to use for SCX Agent SSH Authentication.')]
 	[Alias('LinuxUsername')]
 	[string]$SCXUsername,
 	[Parameter(Mandatory = $false,
-			   Position = 31,
+			   Position = 32,
 			   HelpMessage = 'Set additional servers to run checks against. This can be Agents or Gateways, they have to be in the same domain at this time.')]
 	[Alias('s')]
 	[Array]$Servers,
-	[Parameter(Position = 32,
+	[Parameter(Position = 33,
 			   HelpMessage = 'Skip the tests for remote accessibility, use this if you know your environment passes these tests. DO NOT USE THIS IF YOU ARENT SURE!')]
 	[Alias('sct')]
 	[switch]$SkipConnectivityTests,
-	[Parameter(Position = 33,
+	[Parameter(Position = 34,
 			   HelpMessage = 'Skip the General Information file gathering.')]
 	[Alias('sgi')]
 	[switch]$SkipGeneralInformation,
 	[Parameter(Mandatory = $false,
-			   Position = 34,
+			   Position = 35,
 			   HelpMessage = 'Skip the SQL Queries. This will leave you with much less data in the data collector. Other functions in the data collector may rely on the SQL Queries and may be missing data.')]
 	[Alias('NoSQLQueries')]
 	[switch]$SkipSQLQueries,
-	[Parameter(Position = 35,
+	[Parameter(Position = 36,
 			   HelpMessage = 'Gather SQL Logs from OperationsManager and DataWarehouse DBs.')]
 	[switch]$SQLLogs,
 	[Parameter(Mandatory = $false,
-			   Position = 36,
+			   Position = 37,
 			   HelpMessage = 'Run only SQL Queries and Output to CSV.')]
 	[switch]$SQLOnly,
 	[Parameter(Mandatory = $false,
-			   Position = 37,
+			   Position = 38,
 			   HelpMessage = 'Internal Script Switch.',
 			   DontShow = $true)]
 	[switch]$SQLOnlyDW,
 	[Parameter(Mandatory = $false,
-			   Position = 38,
+			   Position = 39,
 			   HelpMessage = 'Internal Script Switch.',
 			   DontShow = $true)]
 	[switch]$SQLOnlyOpsDB
@@ -366,6 +373,183 @@ if (!($SQLOnly -or $SQLOnlyDW -or $SQLOnlyOpsDB))
 	Write-Host "Script currently running as: " -ForegroundColor DarkGray -NoNewLine
 	Write-Host $runningas -ForegroundColor Gray
 	$CSVFile = $ScriptPath
+	[void][System.Reflection.Assembly]::Load('System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a')
+	[void][System.Reflection.Assembly]::Load('System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089')
+	
+	function Show-EULAPopup($mode)
+	{
+		$EULA = New-Object -TypeName System.Windows.Forms.Form
+		$richTextBox1 = New-Object System.Windows.Forms.RichTextBox
+		$btnAcknowledge = New-Object System.Windows.Forms.Button
+		$btnCancel = New-Object System.Windows.Forms.Button
+		
+		$EULA.SuspendLayout()
+		$EULA.Name = "EULA"
+		$EULA.Text = "Microsoft Diagnostic Tools End User License Agreement"
+		
+		$richTextBox1.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+		$richTextBox1.Location = New-Object System.Drawing.Point(12, 12)
+		$richTextBox1.Name = "richTextBox1"
+		$richTextBox1.ScrollBars = [System.Windows.Forms.RichTextBoxScrollBars]::Vertical
+		$richTextBox1.Size = New-Object System.Drawing.Size(776, 397)
+		$richTextBox1.TabIndex = 0
+		$richTextBox1.ReadOnly = $True
+		$richTextBox1.Add_LinkClicked({ Start-Process -FilePath $_.LinkText })
+		$richTextBox1.Rtf = @"
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fswiss\fprq2\fcharset0 Segoe UI;}{\f1\fnil\fcharset0 Calibri;}{\f2\fnil\fcharset0 Microsoft Sans Serif;}}
+{\colortbl ;\red0\green0\blue255;}
+{\*\generator Riched20 10.0.19041}{\*\mmathPr\mdispDef1\mwrapIndent1440 }\viewkind4\uc1 
+\pard\widctlpar\f0\fs19\lang1033 MICROSOFT SOFTWARE LICENSE TERMS\par
+Microsoft Diagnostic Scripts and Utilities\par
+\par
+{\pict{\*\picprop}\wmetafile8\picw26\pich26\picwgoal32000\pichgoal15 
+0100090000035000000000002700000000000400000003010800050000000b0200000000050000
+000c0202000200030000001e000400000007010400040000000701040027000000410b2000cc00
+010001000000000001000100000000002800000001000000010000000100010000000000000000
+000000000000000000000000000000000000000000ffffff00000000ff040000002701ffff0300
+00000000
+}These license terms are an agreement between you and Microsoft Corporation (or one of its affiliates). IF YOU COMPLY WITH THESE LICENSE TERMS, YOU HAVE THE RIGHTS BELOW. BY USING THE SOFTWARE, YOU ACCEPT THESE TERMS.\par
+{\pict{\*\picprop}\wmetafile8\picw26\pich26\picwgoal32000\pichgoal15 
+0100090000035000000000002700000000000400000003010800050000000b0200000000050000
+000c0202000200030000001e000400000007010400040000000701040027000000410b2000cc00
+010001000000000001000100000000002800000001000000010000000100010000000000000000
+000000000000000000000000000000000000000000ffffff00000000ff040000002701ffff0300
+00000000
+}\par
+\pard 
+{\pntext\f0 1.\tab}{\*\pn\pnlvlbody\pnf0\pnindent0\pnstart1\pndec{\pntxta.}}
+\fi-360\li360 INSTALLATION AND USE RIGHTS. Subject to the terms and restrictions set forth in this license, Microsoft Corporation (\ldblquote Microsoft\rdblquote ) grants you (\ldblquote Customer\rdblquote  or \ldblquote you\rdblquote ) a non-exclusive, non-assignable, fully paid-up license to use and reproduce the script or utility provided under this license (the "Software"), solely for Customer\rquote s internal business purposes, to help Microsoft troubleshoot issues with one or more Microsoft products, provided that such license to the Software does not include any rights to other Microsoft technologies (such as products or services). \ldblquote Use\rdblquote  means to copy, install, execute, access, display, run or otherwise interact with the Software. \par
+\pard\widctlpar\par
+\pard\widctlpar\li360 You may not sublicense the Software or any use of it through distribution, network access, or otherwise. Microsoft reserves all other rights not expressly granted herein, whether by implication, estoppel or otherwise. You may not reverse engineer, decompile or disassemble the Software, or otherwise attempt to derive the source code for the Software, except and to the extent required by third party licensing terms governing use of certain open source components that may be included in the Software, or remove, minimize, block, or modify any notices of Microsoft or its suppliers in the Software. Neither you nor your representatives may use the Software provided hereunder: (i) in a way prohibited by law, regulation, governmental order or decree; (ii) to violate the rights of others; (iii) to try to gain unauthorized access to or disrupt any service, device, data, account or network; (iv) to distribute spam or malware; (v) in a way that could harm Microsoft\rquote s IT systems or impair anyone else\rquote s use of them; (vi) in any application or situation where use of the Software could lead to the death or serious bodily injury of any person, or to physical or environmental damage; or (vii) to assist, encourage or enable anyone to do any of the above.\par
+\par
+\pard\widctlpar\fi-360\li360 2.\tab DATA. Customer owns all rights to data that it may elect to share with Microsoft through using the Software. You can learn more about data collection and use in the help documentation and the privacy statement at {{\field{\*\fldinst{HYPERLINK https://aka.ms/privacy }}{\fldrslt{https://aka.ms/privacy\ul0\cf0}}}}\f0\fs19 . Your use of the Software operates as your consent to these practices.\par
+\pard\widctlpar\par
+\pard\widctlpar\fi-360\li360 3.\tab FEEDBACK. If you give feedback about the Software to Microsoft, you grant to Microsoft, without charge, the right to use, share and commercialize your feedback in any way and for any purpose.\~ You will not provide any feedback that is subject to a license that would require Microsoft to license its software or documentation to third parties due to Microsoft including your feedback in such software or documentation. \par
+\pard\widctlpar\par
+\pard\widctlpar\fi-360\li360 4.\tab EXPORT RESTRICTIONS. Customer must comply with all domestic and international export laws and regulations that apply to the Software, which include restrictions on destinations, end users, and end use. For further information on export restrictions, visit {{\field{\*\fldinst{HYPERLINK https://aka.ms/exporting }}{\fldrslt{https://aka.ms/exporting\ul0\cf0}}}}\f0\fs19 .\par
+\pard\widctlpar\par
+\pard\widctlpar\fi-360\li360\qj 5.\tab REPRESENTATIONS AND WARRANTIES. Customer will comply with all applicable laws under this agreement, including in the delivery and use of all data. Customer or a designee agreeing to these terms on behalf of an entity represents and warrants that it (i) has the full power and authority to enter into and perform its obligations under this agreement, (ii) has full power and authority to bind its affiliates or organization to the terms of this agreement, and (iii) will secure the permission of the other party prior to providing any source code in a manner that would subject the other party\rquote s intellectual property to any other license terms or require the other party to distribute source code to any of its technologies.\par
+\pard\widctlpar\par
+\pard\widctlpar\fi-360\li360\qj 6.\tab DISCLAIMER OF WARRANTY. THE SOFTWARE IS PROVIDED \ldblquote AS IS,\rdblquote  WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL MICROSOFT OR ITS LICENSORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\par
+\pard\widctlpar\qj\par
+\pard\widctlpar\fi-360\li360\qj 7.\tab LIMITATION ON AND EXCLUSION OF DAMAGES. IF YOU HAVE ANY BASIS FOR RECOVERING DAMAGES DESPITE THE PRECEDING DISCLAIMER OF WARRANTY, YOU CAN RECOVER FROM MICROSOFT AND ITS SUPPLIERS ONLY DIRECT DAMAGES UP TO U.S. $5.00. YOU CANNOT RECOVER ANY OTHER DAMAGES, INCLUDING CONSEQUENTIAL, LOST PROFITS, SPECIAL, INDIRECT, OR INCIDENTAL DAMAGES. This limitation applies to (i) anything related to the Software, services, content (including code) on third party Internet sites, or third party applications; and (ii) claims for breach of contract, warranty, guarantee, or condition; strict liability, negligence, or other tort; or any other claim; in each case to the extent permitted by applicable law. It also applies even if Microsoft knew or should have known about the possibility of the damages. The above limitation or exclusion may not apply to you because your state, province, or country may not allow the exclusion or limitation of incidental, consequential, or other damages.\par
+\pard\widctlpar\par
+\pard\widctlpar\fi-360\li360 8.\tab BINDING ARBITRATION AND CLASS ACTION WAIVER. This section applies if you live in (or, if a business, your principal place of business is in) the United States.  If you and Microsoft have a dispute, you and Microsoft agree to try for 60 days to resolve it informally. If you and Microsoft can\rquote t, you and Microsoft agree to binding individual arbitration before the American Arbitration Association under the Federal Arbitration Act (\ldblquote FAA\rdblquote ), and not to sue in court in front of a judge or jury. Instead, a neutral arbitrator will decide. Class action lawsuits, class-wide arbitrations, private attorney-general actions, and any other proceeding where someone acts in a representative capacity are not allowed; nor is combining individual proceedings without the consent of all parties. The complete Arbitration Agreement contains more terms and is at {{\field{\*\fldinst{HYPERLINK https://aka.ms/arb-agreement-4 }}{\fldrslt{https://aka.ms/arb-agreement-4\ul0\cf0}}}}\f0\fs19 . You and Microsoft agree to these terms. \par
+\pard\widctlpar\par
+\pard\widctlpar\fi-360\li360 9.\tab LAW AND VENUE. If U.S. federal jurisdiction exists, you and Microsoft consent to exclusive jurisdiction and venue in the federal court in King County, Washington for all disputes heard in court (excluding arbitration). If not, you and Microsoft consent to exclusive jurisdiction and venue in the Superior Court of King County, Washington for all disputes heard in court (excluding arbitration).\par
+\pard\widctlpar\par
+\pard\widctlpar\fi-360\li360 10.\tab ENTIRE AGREEMENT. This agreement, and any other terms Microsoft may provide for supplements, updates, or third-party applications, is the entire agreement for the software.\par
+\pard\sa200\sl276\slmult1\f1\fs22\lang9\par
+\pard\f2\fs17\lang2057\par
+}
+"@
+		$richTextBox1.BackColor = [System.Drawing.Color]::White
+		$btnAcknowledge.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
+		$btnAcknowledge.Location = New-Object System.Drawing.Point(544, 415)
+		$btnAcknowledge.Name = "btnAcknowledge";
+		$btnAcknowledge.Size = New-Object System.Drawing.Size(119, 23)
+		$btnAcknowledge.TabIndex = 1
+		$btnAcknowledge.Text = "Accept"
+		$btnAcknowledge.UseVisualStyleBackColor = $True
+		$btnAcknowledge.Add_Click({ $EULA.DialogResult = [System.Windows.Forms.DialogResult]::Yes })
+		
+		$btnCancel.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
+		$btnCancel.Location = New-Object System.Drawing.Point(669, 415)
+		$btnCancel.Name = "btnCancel"
+		$btnCancel.Size = New-Object System.Drawing.Size(119, 23)
+		$btnCancel.TabIndex = 2
+		if ($mode -ne 0)
+		{
+			$btnCancel.Text = "Close"
+		}
+		else
+		{
+			$btnCancel.Text = "Decline"
+		}
+		$btnCancel.UseVisualStyleBackColor = $True
+		$btnCancel.Add_Click({ $EULA.DialogResult = [System.Windows.Forms.DialogResult]::No })
+		
+		$EULA.AutoScaleDimensions = New-Object System.Drawing.SizeF(6.0, 13.0)
+		$EULA.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::Font
+		$EULA.ClientSize = New-Object System.Drawing.Size(800, 450)
+		$EULA.Controls.Add($btnCancel)
+		$EULA.Controls.Add($richTextBox1)
+		if ($mode -ne 0)
+		{
+			$EULA.AcceptButton = $btnCancel
+		}
+		else
+		{
+			$EULA.Controls.Add($btnAcknowledge)
+			$EULA.AcceptButton = $btnAcknowledge
+			$EULA.CancelButton = $btnCancel
+		}
+		$EULA.ResumeLayout($false)
+		$EULA.Size = New-Object System.Drawing.Size(800, 650)
+		
+		Return ($EULA.ShowDialog())
+	}
+	
+	function Show-EULAIfNeeded($toolName, $mode)
+	{
+		$eulaRegPath = "HKCU:Software\Microsoft\CESDiagnosticTools"
+		$eulaAccepted = "No"
+		$eulaValue = $toolName + " EULA Accepted"
+		if (Test-Path $eulaRegPath)
+		{
+			$eulaRegKey = Get-Item $eulaRegPath
+			$eulaAccepted = $eulaRegKey.GetValue($eulaValue, "No")
+		}
+		else
+		{
+			$eulaRegKey = New-Item $eulaRegPath
+		}
+		if ($mode -eq 2) # silent accept
+		{
+			$eulaAccepted = "Yes"
+			$ignore = New-ItemProperty -Path $eulaRegPath -Name $eulaValue -Value $eulaAccepted -PropertyType String -Force
+		}
+		else
+		{
+			if ($eulaAccepted -eq "No")
+			{
+				$eulaAccepted = Show-EULAPopup($mode)
+				if ($eulaAccepted -eq [System.Windows.Forms.DialogResult]::Yes)
+				{
+					$eulaAccepted = "Yes"
+					$ignore = New-ItemProperty -Path $eulaRegPath -Name $eulaValue -Value $eulaAccepted -PropertyType String -Force
+				}
+			}
+		}
+		return $eulaAccepted
+	}
+	
+	# Call ShowEULAIfNeeded from your main entry point, with your tool name (used to maintain 'already accepted' registry value)
+	# $mode: 
+	#    0=popup eula if not yet accepted for this tool
+	#    1=popup eula for display
+	#    2=silently accept eula
+	# if the function does not return "Yes" then you should exit
+	# e.g.
+	# 
+	# 
+	#
+	if ($AcceptEula)
+	{
+		$eulaAccepted = Show-EULAIfNeeded "SCOM Data Collector" 2
+	}
+	else
+	{
+		$eulaAccepted = Show-EULAIfNeeded "SCOM Data Collector" 0
+	}
+	
+	if ($eulaAccepted -ne "Yes")
+	{
+		Write-Verbose "EULA Declined for SCOM Data Collector"
+		break
+	}
+	Write-Verbose "EULA Accepted for SCOM Data Collector"
+	# ... continue
 	Write-Host "Attempting to run the following command to unblock the Powershell Scripts under the current folder:`nGet-ChildItem $ScriptPath -Recurse | Unblock-File" -ForegroundColor Gray; Get-ChildItem $ScriptPath -Recurse | Unblock-File | Out-Null
 	$scriptout = [Array] @()
 	[String]$Comp = Resolve-DnsName $env:COMPUTERNAME -Type A | Select-Object -Property Name -ExpandProperty Name
@@ -468,171 +652,175 @@ function Start-ScomDataCollector
 	[CmdletBinding()]
 	param
 	(
+		[Parameter(Position = 1,
+				   HelpMessage = 'Accept the End User License Agreement. The EULA acceptance state is stored in HKCU (HKCU:\Software\Microsoft\CESDiagnosticTools\SCOM Data Collector EULA Accepted) to prevent multiple popups every time the tool is launched.')]
+		[Alias('ae')]
+		[switch]$AcceptEula = 0,
 		[Parameter(Mandatory = $false,
-				   Position = 1,
+				   Position = 2,
 				   HelpMessage = 'Gather additional Event Logs. (Example: -AdditionalEventLogs Security)')]
 		[array]$AdditionalEventLogs,
 		[Parameter(Mandatory = $false,
-				   Position = 2,
+				   Position = 3,
 				   HelpMessage = 'Allows you to Specify all the Switches Available for use. (Except: MSInfo32)')]
 		[switch]$All,
 		[Parameter(Mandatory = $false,
-				   Position = 3,
+				   Position = 4,
 				   HelpMessage = 'This will allow you to not be prompted for anything.')]
 		[Alias('yes')]
 		[switch]$AssumeYes,
 		[Parameter(Mandatory = $false,
-				   Position = 4,
+				   Position = 5,
 				   HelpMessage = 'Azure DevOps Build Pipeline switch to output the SDC Results file without any File Date or CaseNumber.',
 				   DontShow = $true)]
 		[Alias('bp')]
 		[switch]$BuildPipeline,
 		[Parameter(Mandatory = $false,
-				   Position = 5,
+				   Position = 6,
 				   HelpMessage = 'Add an Optional Case Number to the Output of the Zip File.')]
 		[Alias('case')]
 		[string]$CaseNumber,
 		[Parameter(Mandatory = $false,
-				   Position = 6,
+				   Position = 7,
 				   HelpMessage = 'Check the Certificates for validity for SCOM use, output in TXT format.')]
 		[Alias('cc')]
 		[switch]$CheckCertificates,
-		[Parameter(Position = 7,
+		[Parameter(Position = 8,
 				   HelpMessage = 'Check the group policy for each server listed in -Servers as well as any Management Servers and SQL Servers.')]
 		[switch]$CheckGroupPolicy,
 		[Parameter(Mandatory = $false,
-				   Position = 8,
+				   Position = 9,
 				   HelpMessage = 'Check SCOM Common Ports against every Management Server in Management Group and SQL Servers, as well as any -Servers listed.')]
 		[switch]$CheckPorts,
 		[Parameter(Mandatory = $false,
-				   Position = 9,
+				   Position = 10,
 				   HelpMessage = 'Check for TLS 1.2 Readiness, output in TXT format.')]
 		[Alias('ct')]
 		[switch]$CheckTLS,
 		[Parameter(Mandatory = $false,
-				   Position = 10,
+				   Position = 11,
 				   HelpMessage = 'Export all Sealed/Unsealed MPs.')]
 		[Alias('em')]
 		[switch]$ExportMPs,
 		[Parameter(Mandatory = $false,
-				   Position = 11,
+				   Position = 12,
 				   HelpMessage = 'Generate a HTML Report Page { EXPERIMENTAL }')]
 		[Alias('html')]
 		[switch]$GenerateHTML,
-		[Parameter(Position = 12,
+		[Parameter(Position = 13,
 				   HelpMessage = 'Gather the Registry / ConfigService.config Configuration of the Management Servers.')]
 		[switch]$GetConfiguration,
 		[Parameter(Mandatory = $false,
-				   Position = 13,
+				   Position = 14,
 				   HelpMessage = 'Gather Event Logs with the localemetadata to ensure that you are able to open the Event log from any machine.')]
 		[Alias('gel')]
 		[switch]$GetEventLogs,
 		[Parameter(Mandatory = $false,
-				   Position = 14,
+				   Position = 15,
 				   HelpMessage = 'Gather software installed from Management Servers / Agents / Gateways.')]
 		[switch]$GetInstalledSoftware,
-		[Parameter(Position = 15)]
+		[Parameter(Position = 16)]
 		[switch]$GetInstallLogs,
 		[Parameter(Mandatory = $false,
-				   Position = 16,
+				   Position = 17,
 				   HelpMessage = 'Get Local Administrators and Logon Rights.')]
 		[Alias('gls')]
 		[switch]$GetLocalSecurity,
 		[Parameter(Mandatory = $false,
-				   Position = 17,
+				   Position = 18,
 				   HelpMessage = 'A description of the GetNotificationSubscriptions parameter.')]
 		[switch]$GetNotificationSubscriptions,
 		[Parameter(Mandatory = $false,
-				   Position = 18,
+				   Position = 19,
 				   HelpMessage = 'A description of the GetRulesAndMonitors parameter.')]
 		[Alias('gram')]
 		[switch]$GetRulesAndMonitors,
 		[Parameter(Mandatory = $false,
-				   Position = 19,
+				   Position = 20,
 				   HelpMessage = 'Get RunAs Accounts that are set on each Management Server.')]
 		[Alias('graa')]
 		[switch]$GetRunAsAccounts,
 		[Parameter(Mandatory = $false,
-				   Position = 20,
+				   Position = 21,
 				   HelpMessage = 'Get SPN Configuration from Active Directory.')]
 		[Alias('gs')]
 		[switch]$GetSPN,
-		[Parameter(Position = 21,
+		[Parameter(Position = 22,
 				   HelpMessage = 'Gathers User Roles and the configurations from SCOM.')]
 		[switch]$GetUserRoles,
 		[Parameter(Mandatory = $false,
-				   Position = 22,
+				   Position = 23,
 				   HelpMessage = 'Gathers Group Policy Results to verify Harmful Policies are not present, Generated in HTML and TXT Format.')]
 		[Alias('gp')]
 		[switch]$GPResult,
 		[Parameter(Mandatory = $false,
-				   Position = 23,
+				   Position = 24,
 				   HelpMessage = 'Pull the least amount of data from SCOM.')]
 		[switch]$LeastAmount,
 		[Parameter(Mandatory = $false,
-				   Position = 24,
+				   Position = 25,
 				   HelpMessage = 'Only run data gathering against the Management Servers specified here.')]
 		[Alias('ms')]
 		[array]$ManagementServers,
 		[Parameter(Mandatory = $false,
-				   Position = 25,
+				   Position = 26,
 				   HelpMessage = 'Export MSInfo32 for viewing in TXT Format.')]
 		[Alias('mi32')]
 		[switch]$MSInfo32,
-		[Parameter(Position = 26,
+		[Parameter(Position = 27,
 				   HelpMessage = 'Internal Script Switch.')]
 		[switch]$NoSQLPermission,
 		[Parameter(Mandatory = $false,
-				   Position = 27,
+				   Position = 28,
 				   HelpMessage = 'Ping every Management Server, including servers mentioned in -Servers switch.')]
 		[switch]$PingAll,
 		[Parameter(Mandatory = $false,
-				   Position = 28,
+				   Position = 29,
 				   HelpMessage = 'Linux/Unix Agents you want to gather data from, via Bash Script that is transmitted via ssh.')]
 		[Alias('LinuxAgents')]
 		[Array]$SCXAgents,
 		[Parameter(Mandatory = $false,
-				   Position = 29,
+				   Position = 30,
 				   HelpMessage = 'The password you would like to use for SCX Agent SSH Authentication.')]
 		[Alias('LinuxPassword')]
 		[string]$SCXPassword,
 		[Parameter(Mandatory = $false,
-				   Position = 30,
+				   Position = 31,
 				   HelpMessage = 'The username you would like to use for SCX Agent SSH Authentication.')]
 		[Alias('LinuxUsername')]
 		[string]$SCXUsername,
 		[Parameter(Mandatory = $false,
-				   Position = 31,
+				   Position = 32,
 				   HelpMessage = 'Set additional servers to run checks against. This can be Agents or Gateways, they have to be in the same domain at this time.')]
 		[Alias('s')]
 		[Array]$Servers,
-		[Parameter(Position = 32,
+		[Parameter(Position = 33,
 				   HelpMessage = 'Skip the tests for remote accessibility, use this if you know your environment passes these tests. DO NOT USE THIS IF YOU ARENT SURE!')]
 		[Alias('sct')]
 		[switch]$SkipConnectivityTests,
-		[Parameter(Position = 33,
+		[Parameter(Position = 34,
 				   HelpMessage = 'Skip the General Information file gathering.')]
 		[Alias('sgi')]
 		[switch]$SkipGeneralInformation,
 		[Parameter(Mandatory = $false,
-				   Position = 34,
+				   Position = 35,
 				   HelpMessage = 'Skip the SQL Queries. This will leave you with much less data in the data collector. Other functions in the data collector may rely on the SQL Queries and may be missing data.')]
 		[Alias('NoSQLQueries')]
 		[switch]$SkipSQLQueries,
-		[Parameter(Position = 35,
+		[Parameter(Position = 36,
 				   HelpMessage = 'Gather SQL Logs from OperationsManager and DataWarehouse DBs.')]
 		[switch]$SQLLogs,
 		[Parameter(Mandatory = $false,
-				   Position = 36,
+				   Position = 37,
 				   HelpMessage = 'Run only SQL Queries and Output to CSV.')]
 		[switch]$SQLOnly,
 		[Parameter(Mandatory = $false,
-				   Position = 37,
+				   Position = 38,
 				   HelpMessage = 'Internal Script Switch.',
 				   DontShow = $true)]
 		[switch]$SQLOnlyDW,
 		[Parameter(Mandatory = $false,
-				   Position = 38,
+				   Position = 39,
 				   HelpMessage = 'Internal Script Switch.',
 				   DontShow = $true)]
 		[switch]$SQLOnlyOpsDB
@@ -1596,7 +1784,7 @@ function Start-ScomDataCollector
 	exit 0
 }
 
-if ($BuildPipeline -or $CheckTLS -or $CheckCertificates -or $GetEventLogs -or $MSInfo32 -or $AssumeYes -or $ExportMPs -or $CaseNumber -or $Servers -or $GenerateHTML -or $GetRulesAndMonitors -or $GetRunAsAccounts -or $All -or $GPResult -or $SQLLogs -or $NoSQLPermission -or $SQLOnly -or $SQLOnlyOpsDB -or $SQLOnlyDW -or $CheckPorts -or $GetLocalSecurity -or $LeastAmount -or $GetNotificationSubscriptions -or $AdditionalEventLogs -or $GetInstalledSoftware -or $GetSPN -or $ManagementServers -or $SkipConnectivityTests -or $GetConfiguration -or $SkipGeneralInformation -or $SkipSQLQueries -or $CheckGroupPolicy -or $GetInstallLogs -or $SCXAgents -or $SCXUsername -or $SCXPassword -or $GetUserRoles)
+if ($AcceptEula -or $BuildPipeline -or $CheckTLS -or $CheckCertificates -or $GetEventLogs -or $MSInfo32 -or $AssumeYes -or $ExportMPs -or $CaseNumber -or $Servers -or $GenerateHTML -or $GetRulesAndMonitors -or $GetRunAsAccounts -or $All -or $GPResult -or $SQLLogs -or $NoSQLPermission -or $SQLOnly -or $SQLOnlyOpsDB -or $SQLOnlyDW -or $CheckPorts -or $GetLocalSecurity -or $LeastAmount -or $GetNotificationSubscriptions -or $AdditionalEventLogs -or $GetInstalledSoftware -or $GetSPN -or $ManagementServers -or $SkipConnectivityTests -or $GetConfiguration -or $SkipGeneralInformation -or $SkipSQLQueries -or $CheckGroupPolicy -or $GetInstallLogs -or $SCXAgents -or $SCXUsername -or $SCXPassword -or $GetUserRoles)
 {
 	if ($all)
 	{
@@ -1604,27 +1792,27 @@ if ($BuildPipeline -or $CheckTLS -or $CheckCertificates -or $GetEventLogs -or $M
 		{
 			if ($AssumeYes)
 			{
-				Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+				Start-ScomDataCollector -AcceptEula:$AcceptEula -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
 			}
-			Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+			Start-ScomDataCollector -AcceptEula:$AcceptEula -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
 		}
 		if ($AssumeYes)
 		{
-			Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+			Start-ScomDataCollector -AcceptEula:$AcceptEula -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
 		}
 		if ($SCXAgents)
 		{
 			if ($AssumeYes)
 			{
-				Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXPassword $SCXPassword -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+				Start-ScomDataCollector -AcceptEula:$AcceptEula -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXPassword $SCXPassword -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
 			}
-			Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXPassword $SCXPassword -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+			Start-ScomDataCollector -AcceptEula:$AcceptEula -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXPassword $SCXPassword -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
 		}
-		Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -GPResult -ExportMPs -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+		Start-ScomDataCollector -AcceptEula:$AcceptEula -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -GPResult -ExportMPs -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
 	}
 	else
 	{
-		Start-ScomDataCollector -Servers $Servers -GetRunAsAccounts:$GetRunAsAccounts -CheckTLS:$CheckTLS -CheckCertificates:$CheckCertificates -GetEventLogs:$GetEventLogs -GetUserRoles:$GetUserRoles -GetRulesAndMonitors:$GetRulesAndMonitors -GPResult:$GPResult -ManagementServers:$ManagementServers -MSInfo32:$MSInfo32 -SQLLogs:$SQLLogs -ExportMPs:$ExportMPs -CaseNumber:$CaseNumber -GenerateHTML:$GenerateHTML -AssumeYes:$AssumeYes -NoSQLPermission:$NoSQLPermission -SQLOnly:$SQLOnly -SQLOnlyOpsDB:$SQLOnlyOpsDB -SQLOnlyDW:$SQLOnlyDW -CheckPorts:$CheckPorts -GetLocalSecurity:$GetLocalSecurity -LeastAmount:$LeastAmount -GetNotificationSubscriptions:$GetNotificationSubscriptions -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware:$GetInstalledSoftware -GetSPN:$GetSPN -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -GetConfiguration:$GetConfiguration -CheckGroupPolicy:$CheckGroupPolicy -GetInstallLogs:$GetInstallLogs -BuildPipeline:$BuildPipeline -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXPassword $SCXPassword
+		Start-ScomDataCollector -AcceptEula:$AcceptEula -Servers $Servers -GetRunAsAccounts:$GetRunAsAccounts -CheckTLS:$CheckTLS -CheckCertificates:$CheckCertificates -GetEventLogs:$GetEventLogs -GetUserRoles:$GetUserRoles -GetRulesAndMonitors:$GetRulesAndMonitors -GPResult:$GPResult -ManagementServers:$ManagementServers -MSInfo32:$MSInfo32 -SQLLogs:$SQLLogs -ExportMPs:$ExportMPs -CaseNumber:$CaseNumber -GenerateHTML:$GenerateHTML -AssumeYes:$AssumeYes -NoSQLPermission:$NoSQLPermission -SQLOnly:$SQLOnly -SQLOnlyOpsDB:$SQLOnlyOpsDB -SQLOnlyDW:$SQLOnlyDW -CheckPorts:$CheckPorts -GetLocalSecurity:$GetLocalSecurity -LeastAmount:$LeastAmount -GetNotificationSubscriptions:$GetNotificationSubscriptions -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware:$GetInstalledSoftware -GetSPN:$GetSPN -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -GetConfiguration:$GetConfiguration -CheckGroupPolicy:$CheckGroupPolicy -GetInstallLogs:$GetInstallLogs -BuildPipeline:$BuildPipeline -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXPassword $SCXPassword
 	}
 }
 elseif (!$SQLOnly)

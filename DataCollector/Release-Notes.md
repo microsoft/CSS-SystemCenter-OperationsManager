@@ -1,8 +1,6 @@
 # Change Log
 
-## Additions
-- Added Diagnostic Tools License/EULA to start of tool. You can bypass this by running `-AcceptEula` or `-ae`
-- Added the following new SQL Queries: `DW_Alerts_ByDay.sql`, `DW_Alerts_ByCount.sql`, `DW_Alerts_ByRepeat.sql`, `DW_Alerts_ByOldest.sql`
-- Added WinRM Configuration Details to the General Information text file.
+## Bug Fixes
+- Remove the EULA from start of script, as it is causing issues running the script.
 
-[![Download Count v-3.8.15](https://img.shields.io/github/downloads/blakedrumm/SCOM-Scripts-and-SQL/v-3.8.15/SCOM-DataCollector.zip?style=for-the-badge&color=brightgreen)](https://github.com/blakedrumm/SCOM-Scripts-and-SQL/releases/download/v-3.8.15/SCOM-DataCollector.zip)
+[![Download Count v-3.8.16](https://img.shields.io/github/downloads/blakedrumm/SCOM-Scripts-and-SQL/v-3.8.16/SCOM-DataCollector.zip?style=for-the-badge&color=brightgreen)](https://github.com/blakedrumm/SCOM-Scripts-and-SQL/releases/download/v-3.8.16/SCOM-DataCollector.zip)

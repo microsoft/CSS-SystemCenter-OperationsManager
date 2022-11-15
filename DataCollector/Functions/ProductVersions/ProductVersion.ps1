@@ -12,7 +12,7 @@ function Get-ProductVersion
 	)
 	
 	#Last Updated SQL Server List on: August 25th, 2022
-	#Last Updated SCOM Version List on: June 15th, 2022
+	#Last Updated SCOM Version List on: November 15th, 2022
 	#Last Updated SSRS Version List on: August 25th, 2022
 	
 	if ($Product -eq 'SCOM')
@@ -31,6 +31,7 @@ function Get-ProductVersion
     <# 
        System Center Operations Manager 2019 Versions
     #>
+			'10.19.1158.0'  { "Update Rollup 4 - OMI Vulnerability Fix - 1.6.10-2 / August 2022" } #SCX Agent
 			'10.19.1150.0'  { "SCOM 2019 Update Rollup 4 - 1.6.10-1 / June 2022" } #SCX Agent
 			'10.19.10200.0' { "SCOM 2019 Update Rollup 4 / June 2022" } #Agent
 			'10.19.10569.0' { "SCOM 2019 Update Rollup 4 / June 2022" }

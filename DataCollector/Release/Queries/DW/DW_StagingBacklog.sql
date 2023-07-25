@@ -17,3 +17,5 @@ UNION ALL
 SELECT 'Perf.PerformanceStage' AS 'TableName',count(*) AS 'Count' FROM Perf.PerformanceStage WITH (NOLOCK)
 UNION ALL
 SELECT 'State.StateStage' AS 'TableName',count(*) AS 'Count' FROM State.StateStage WITH (NOLOCK)
+UNION ALL
+SELECT 'StateProcessedMaintenanceMode' AS 'TableName',count(*) AS 'Count' FROM StateProcessedMaintenanceMode WITH (NOLOCK)

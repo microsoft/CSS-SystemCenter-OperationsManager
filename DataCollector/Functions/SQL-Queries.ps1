@@ -1,4 +1,4 @@
-Function SQL-Queries
+Function Invoke-SQLQueries
 {
 	trap
 	{
@@ -9,7 +9,7 @@ Function SQL-Queries
 		$msg = $e.Message
 		
 		Write-Verbose "Caught Exception: $e :: Message: $msg :: at line: $line"
-		"$(Time-Stamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+		"$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
 	}
 	function Invoke-SqlCommand
 	{
@@ -29,10 +29,10 @@ Function SQL-Queries
         .PARAMETER Connection
             The System.Data.SqlClient.SQLConnection instance used to connect.
 
-        .PARAMETER Username
+        .REMOVEDPARAMETER Username
             The SQL Authentication Username.
 
-        .PARAMETER Password
+        .REMOVEDPARAMETER Password
             The SQL Authentication Password.
 
         .PARAMETER CommandType
@@ -92,8 +92,8 @@ Function SQL-Queries
 			[Parameter(Mandatory = $false, Position = 2)]
 			[int]$Timeout = 30,
 			[System.Data.SqlClient.SQLConnection]$Connection,
-			[string]$Username,
-			[string]$Password,
+			#[string]$Username,
+			#[string]$Password,
 			[System.Data.CommandType]$CommandType = [System.Data.CommandType]::Text,
 			[string]$Query,
 			[ValidateScript({ Test-Path -Path $_ })]
@@ -122,6 +122,7 @@ Function SQL-Queries
 			if ($createConnection)
 			{
 				$Connection = New-Object System.Data.SqlClient.SQLConnection
+<#				
 				if ($Username -and $Password)
 				{
 					$Connection.ConnectionString = "Server=$($Server);Database=$($Database);User Id=$($Username);Password=$($Password);"
@@ -130,6 +131,8 @@ Function SQL-Queries
 				{
 					$Connection.ConnectionString = "Server=$($Server);Database=$($Database);Integrated Security=SSPI;"
 				}
+				#>
+				$Connection.ConnectionString = "Server=$($Server);Database=$($Database);Integrated Security=SSPI;"
 				if ($PSBoundParameters.Verbose)
 				{
 					$Connection.FireInfoMessageEventOnUserErrors = $true
@@ -228,6 +231,27 @@ Function SQL-Queries
 		end
 		{
 			if ($createConnection) { $Connection.Close() }
+			if ($command)
+			{
+				$command.Dispose()
+			}
+			if ($Connection)
+			{
+				$Connection.Dispose()
+			}
+			if ($da)
+			{
+				$da.Dispose()
+			}
+			if ($ds)
+			{
+				$ds.Dispose()
+			}
+			
+			if ($reader)
+			{
+				$reader.Dispose()
+			}
 			Write-Verbose "$($result | Out-String)"
 			return $result
 		}
@@ -236,38 +260,36 @@ Function SQL-Queries
   function Invoke-SqlCommand { ${Function:Invoke-SQLCommand} } 
 "@)
 	## strip fqdn etc...
-	If ($global:OpsDB_SQLServerOriginal -like "*,*")
+	If ($OpsDB_SQLServerOriginal -like "*,*")
 	{
-		$global:OpsDB_SQLServer = $OpsDB_SQLServerOriginal.split(',')[0]
-		$global:OpsDB_SQLServerPort = $OpsDB_SQLServerOriginal.split(',')[1]
-		$global:DW_SQLServerInstance = $null
+		$OpsDB_SQLServer = $OpsDB_SQLServerOriginal.split(',')[0]
+		$OpsDB_SQLServerPort = $OpsDB_SQLServerOriginal.split(',')[1]
 	}
-	elseif ($global:OpsDB_SQLServerOriginal -like "*\*")
+	elseif ($OpsDB_SQLServerOriginal -like "*\*")
 	{
-		$global:OpsDB_SQLServer = $OpsDB_SQLServerOriginal.split('\')[0]
-		$global:OpsDB_SQLServerInstance = $OpsDB_SQLServerOriginal.split('\')[1]
+		$OpsDB_SQLServer = $OpsDB_SQLServerOriginal.split('\')[0]
+		$OpsDB_SQLServerInstance = $OpsDB_SQLServerOriginal.split('\')[1]
 	}
 	else
 	{
-		$global:OpsDB_SQLServerInstance = $null
-		$global:OpsDB_SQLServerPort = $null
+		$OpsDB_SQLServerInstance = $null
+		$OpsDB_SQLServerPort = $null
 	}
 	
-	If ($global:DW_SQLServerOriginal -like "*,*")
+	If ($DW_SQLServerOriginal -like "*,*")
 	{
-		$global:DW_SQLServer = $DW_SQLServerOriginal.split(',')[0]
-		$global:DW_SQLServerPort = $DW_SQLServerOriginal.split(',')[1]
-		$global:DW_SQLServerInstance = $null
+		$DW_SQLServer = $DW_SQLServerOriginal.split(',')[0]
+		$DW_SQLServerPort = $DW_SQLServerOriginal.split(',')[1]
 	}
-	elseif ($global:DW_SQLServerOriginal -like "*\*")
+	elseif ($DW_SQLServerOriginal -like "*\*")
 	{
-		$global:DW_SQLServer = $DW_SQLServerOriginal.split('\')[0]
-		$global:DW_SQLServerInstance = $DW_SQLServerOriginal.split('\')[1]
+		$DW_SQLServer = $DW_SQLServerOriginal.split('\')[0]
+		$DW_SQLServerInstance = $DW_SQLServerOriginal.split('\')[1]
 	}
 	else
 	{
-		$global:DW_SQLServerInstance = $null
-		$global:DW_SQLServerPort = $null
+		$DW_SQLServerInstance = $null
+		$DW_SQLServerPort = $null
 	}
 	
 	
@@ -276,27 +298,27 @@ Function SQL-Queries
 	$Populated = 1
 	
 	## Verify variables are populated
-	If ($OpsDB_SQLServer -eq $null)
+	If ($null -eq $OpsDB_SQLServer)
 	{
 		write-output "OpsDBServer not found"
-		$populated = 0
+		$Populated = 0
 	}
-	If ($DW_SQLServer -eq $null)
+	If ($null -eq $DW_SQLServer)
 	{
 		write-output "DataWarehouse server not found"
-		$populated = 0
+		$Populated = 0
 	}
-	If ($OpsDB_SQLDBName -eq $null)
+	If ($null -eq $OpsDB_SQLDBName)
 	{
 		write-output "OpsDBName Not found"
-		$populated = 0
+		$Populated = 0
 	}
-	If ($DW_SQLDBName -eq $null)
+	If ($null -eq $DW_SQLDBName)
 	{
 		write-output "DWDBName not found"
-		$populated = 0
+		$Populated = 0
 	}
-	if ($Populated = 0)
+	if ($Populated -eq 0)
 	{
 		"At least some SQL Information not found, exiting script..."
     <# 
@@ -309,27 +331,27 @@ Function SQL-Queries
 	## Combine the objects into a single object and display via table.
 	$color = "Cyan"
 	Write-Output " "
-	Write-Host "OpsDB Server        : $global:OpsDB_SQLServer" -ForegroundColor $color -NoNewline
+	Write-Console "OpsDB Server        : $OpsDB_SQLServer" -ForegroundColor $color -NoNewline
 	if ($OpsDB_SQLServerInstance)
 	{
-		Write-Host "\$OpsDB_SQLServerInstance" -ForegroundColor $color -NoNewline
+		Write-Console "\$OpsDB_SQLServerInstance" -ForegroundColor $color -NoNewline
 	}
 	if ($OpsDB_SQLServerPort)
 	{
-		Write-Host "`nOpsDB Server Port   : $OpsDB_SQLServerPort" -ForegroundColor $color -NoNewline
+		Write-Console "`nOpsDB Server Port   : $OpsDB_SQLServerPort" -ForegroundColor $color -NoNewline
 	}
-	Write-Host "`nOpsDB Name          : $OpsDB_SQLDBName" -ForegroundColor $color
+	Write-Console "`nOpsDB Name          : $OpsDB_SQLDBName" -ForegroundColor $color
 	Write-Output " "
-	Write-Host "DWDB Server         : $($global:DW_SQLServer)" -ForegroundColor $color -NoNewline
-	if ($global:DW_SQLServerInstance)
+	Write-Console "DWDB Server         : $($DW_SQLServer)" -ForegroundColor $color -NoNewline
+	if ($DW_SQLServerInstance)
 	{
-		Write-Host "\$DW_SQLServerInstance" -ForegroundColor $color -NoNewline
+		Write-Console "\$DW_SQLServerInstance" -ForegroundColor $color -NoNewline
 	}
-	if ($global:DW_SQLServerPort)
+	if ($DW_SQLServerPort)
 	{
-		Write-Host "`nDWDB Server Port    : $DW_SQLServerPort" -ForegroundColor $color -NoNewline
+		Write-Console "`nDWDB Server Port    : $DW_SQLServerPort" -ForegroundColor $color -NoNewline
 	}
-	Write-Host "`nDWDB Name           : $DW_SQLDBName" -ForegroundColor $color
+	Write-Console "`nDWDB Name           : $DW_SQLDBName" -ForegroundColor $color
 	Write-Output " "
 	
 	if ($SQLOnlyOpsDB)
@@ -360,7 +382,7 @@ Function SQL-Queries
 		else { $answer = "y" }
 		IF ($answer -eq "y")
 		{
-			Write-Host "Connecting to SQL Server...." -ForegroundColor DarkGreen
+			Write-Console "Connecting to SQL Server...." -ForegroundColor DarkGreen
 		}
 		ELSE
 		{
@@ -375,7 +397,7 @@ Function SQL-Queries
 			{
 				Write-Warning "Be aware, this has not been implemented yet..."
 				return
-			}			
+			}
 		}
 		# Query the OpsDB Database
 		[string]$currentuser = ([Environment]::UserDomainName + "\" + [Environment]::UserName)
@@ -383,7 +405,7 @@ Function SQL-Queries
 		{
 			if (!$AssumeYes)
 			{
-				Write-Host "Currently Detecting User as: $currentuser"
+				Write-Console "Currently Detecting User as: $currentuser"
 				do
 				{
 					$answer2 = Read-Host -Prompt " Does the above user have the correct permissions to perform SQL Queries against OpsDB: $OpsDB_SQLServer`? (Y/N)"
@@ -400,17 +422,27 @@ Function SQL-Queries
 		{
 			do
 			{
-				$answer3 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on OpsDB: $OpsDB_SQLServer`? (SQL/Domain)"
+				#$answer3 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on OpsDB: $OpsDB_SQLServer`? (SQL/Domain)"
+				$answer3 = "Domain"
 			}
 			until ($answer3 -eq "SQL" -or $answer3 -eq "Domain")
-			$SQLuser = Read-Host '   What is your username?'
-			$SQLpass = Read-Host '   What is your password?' -AsSecureString
+			do
+			{
+				$SQLuser = Read-Host '   What is your username?'
+			}
+			until ($SQLuser)
+			do
+			{
+				$SQLpass = Read-Host '   What is your password?' -AsSecureString
+			}
+			until ($SQLPass)
 			do
 			{
 				$proceed = Read-Host "    Would you like to proceed with $SQLuser`? (Y/N)"
 				if ($proceed -eq "n")
 				{
 					$SQLuser = $null
+					$SQLpass = $null
 					$SQLuser = Read-Host '   What is your username?'
 					$SQLpass = Read-Host '   What is your password?' -AsSecureString
 				}
@@ -456,17 +488,27 @@ Function SQL-Queries
 				{
 					do
 					{
-						$answer5 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on DW: $DW_SQLServer`? (SQL/Domain)"
+						#$answer5 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on DW: $DW_SQLServer`? (SQL/Domain)"
+						$answer5 = "Domain"
 					}
 					until ($answer5 -eq "SQL" -or $answer5 -eq "Domain")
-					$SQLuser2 = Read-Host '    What is your username?'
-					$SQLpass2 = Read-Host '    What is your password?' -AsSecureString
+					do
+					{
+						$SQLuser2 = Read-Host '    What is your username?'
+					}
+					until ($SQLuser2)
+					do
+					{
+						$SQLpass2 = Read-Host '    What is your password?' -AsSecureString
+					}
+					until ($SQLpass2)
 					do
 					{
 						$proceed2 = Read-Host "   Would you like to proceed with $SQLuser2`? (Y/N)"
 						if ($proceed2 -eq "n")
 						{
 							$SQLuser2 = $null
+							$SQLpass2 = $null
 							$SQLuser2 = Read-Host '    What is your username?'
 							$SQLpass2 = Read-Host '    What is your password?' -AsSecureString
 						}
@@ -481,14 +523,23 @@ Function SQL-Queries
 					$answer5 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on DW: $DW_SQLServer`? (SQL/Domain)"
 				}
 				until ($answer5 -eq "SQL" -or $answer5 -eq "Domain")
-				$SQLuser2 = Read-Host '    What is your username?'
-				$SQLpass2 = Read-Host '    What is your password?' -AsSecureString
+				do
+				{
+					$SQLuser2 = Read-Host '    What is your username?'
+				}
+				until ($SQLuser2)
+				do
+				{
+					$SQLpass2 = Read-Host '    What is your password?' -AsSecureString
+				}
+				until ($SQLpass2)
 				do
 				{
 					$proceed2 = Read-Host "   Would you like to proceed with $SQLuser2`? (Y/N)"
 					if ($proceed2 -eq "n")
 					{
 						$SQLuser2 = $null
+						$SQLpass2 = $null
 						$SQLuser2 = Read-Host '    What is your username?'
 						$SQLpass2 = Read-Host '    What is your password?' -AsSecureString
 					}
@@ -499,9 +550,24 @@ Function SQL-Queries
 		if ($answer3 -eq "Domain")
 		{
 			$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $SQLuser, $SQLpass
-			$command = "-NoProfile -NoExit -Command cd '$ScriptPath';. '$ScriptPath\$scriptname' -SQLOnlyOpsDB; exit 0"
-			Start-Process powershell.exe ($command) -Credential $Credential -Wait -NoNewWindow
-			$job1 = $true
+			$command = "-NoProfile -NoExit -Command `"cd '$ScriptPath';. '$ScriptPath\$scriptname' -SQLOnlyOpsDB; exit 0`""
+			$error.clear()
+			try
+			{
+				Start-Process powershell.exe ($command) -Credential $Credential -Wait -NoNewWindow
+				$job1 = $true
+			}
+			catch
+			{
+				if ($error -match "The directory name is invalid")
+				{
+					Write-Warning "Unable to access folder in $((Get-Location).Path), move to a more publicly accessible location."
+				}
+				else
+				{
+					Write-Warning "$error"
+				}
+			}
 		}
 		elseif ($answer2 -eq "y")
 		{
@@ -519,9 +585,9 @@ Function SQL-Queries
 				Write-Warning "Path to query files not found ($QueriesPath).  Terminating...."
 				break
 			}
-			Write-Host "`n================================"
-			Write-Host "Starting SQL Query Gathering"
-			Write-Host "Running SQL Queries against Operations Database"
+			Write-Console "`n================================"
+			Write-Console "Starting SQL Query Gathering"
+			Write-Console "Running SQL Queries against Operations Database"
 			try
 			{
 				$timeout = 30
@@ -529,10 +595,12 @@ Function SQL-Queries
 				{
 					$initialCheck = Invoke-SqlCommand -Server $OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
 				}
+				<#				
 				else
 				{
 					$initialCheck = Invoke-SqlCommand -Server $OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Username $SQLuser -Password $SQLpass -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
 				}
+				#>
 				
 				if ($initialCheck)
 				{
@@ -543,18 +611,18 @@ Function SQL-Queries
 				else
 				{
 					Write-Warning "Cannot communicate with SQL DB, expect errors."
-					"$(Time-Stamp)Cannot communicate with SQL DB, expect errors." | Out-File $OutputPath\Error.log -Append
+					"$(Invoke-TimeStamp)Cannot communicate with SQL DB, expect errors." | Out-File $OutputPath\Error.log -Append
 				}
 			}
 			catch
 			{
 				Write-Warning $_
 			}
-			Write-Host " Current query timeout: $timeout seconds ($($timeout/60) minutes) \ Current query job timeout: $jobtimeout seconds ($($jobtimeout/60) minutes)" -ForegroundColor Gray
-			Write-Host "  Looking for query files in: $QueriesPath" -ForegroundColor DarkGray
+			Write-Console " Current query timeout: $timeout seconds ($($timeout/60) minutes) \ Current query job timeout: $jobtimeout seconds ($($jobtimeout/60) minutes)" -ForegroundColor Gray
+			Write-Console "  Looking for query files in: $QueriesPath" -ForegroundColor DarkGray
 			$QueryFiles = Get-ChildItem -Path $QueriesPath -Filter "*.sql" ###BH - Remove Where for Filter left
 			$QueryFilesCount = $QueryFiles.Count
-			Write-Host "   Found ($QueryFilesCount) queries" -ForegroundColor Green
+			Write-Console "   Found ($QueryFilesCount) queries" -ForegroundColor Green
 			FOREACH ($QueryFile in $QueryFiles)
 			{
 				try
@@ -569,48 +637,21 @@ Function SQL-Queries
 						#This runs all queries with Perf in the name, as a job
 						if ($QueryFileName -match 'Perf')
 						{
-							Write-Host "     Running query job: " -ForegroundColor Cyan -NoNewline
-							Write-Host $QueryFile.Name -ForegroundColor Magenta
+							Write-Console "     Running query job: " -ForegroundColor Cyan -NoNewline
+							Write-Console $QueryFile.Name -ForegroundColor Magenta
 							Start-Job -Name "getPerf_Ops-$($QueryFile.Name)" -InitializationScript $InvokeSQLcmdFunction -ScriptBlock $OpsScriptBlock | Out-Null
 						}
 						elseif ($QueryFileName -match 'Event')
 						{
-							Write-Host "     Running query job: " -ForegroundColor Cyan -NoNewline
-							Write-Host $QueryFile.Name -ForegroundColor Magenta
+							Write-Console "     Running query job: " -ForegroundColor Cyan -NoNewline
+							Write-Console $QueryFile.Name -ForegroundColor Magenta
 							Start-Job -Name "getEvent_Ops-$($QueryFile.Name)" -InitializationScript $InvokeSQLcmdFunction -ScriptBlock $OpsScriptBlock | Out-Null
 						}
 						else
 						{
-							Write-Host "     Running query: " -ForegroundColor Cyan -NoNewline
-							Write-Host $QueryFile.Name -ForegroundColor Magenta
+							Write-Console "     Running query: " -ForegroundColor Cyan -NoNewline
+							Write-Console $QueryFile.Name -ForegroundColor Magenta
 							Invoke-SqlCommand -Server $OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
-						}
-						continue
-					}
-					else
-					{
-						$OpsScriptBlock = [scriptblock]::Create(@"
-  Invoke-SqlCommand -Server $OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Username $SQLuser -Password $SQLpass -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $jobtimeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
-"@)
-						
-						#This runs all queries with Perf in the name, as a job
-						if ($QueryFileName -match 'Perf')
-						{
-							Write-Host "     Running query job: " -ForegroundColor Cyan -NoNewline
-							Write-Host $QueryFile.Name -ForegroundColor Magenta
-							Start-Job -Name "getPerf_Ops-$($QueryFile.Name)" -InitializationScript $InvokeSQLcmdFunction -ScriptBlock $OpsScriptBlock | Out-Null
-						}
-						elseif ($QueryFileName -match 'Event')
-						{
-							Write-Host "     Running query job: " -ForegroundColor Cyan -NoNewline
-							Write-Host $QueryFile.Name -ForegroundColor Magenta
-							Start-Job -Name "getEvent_Ops-$($QueryFile.Name)" -InitializationScript $InvokeSQLcmdFunction -ScriptBlock $OpsScriptBlock | Out-Null
-						}
-						else
-						{
-							Write-Host "     Running query: " -ForegroundColor Cyan -NoNewline
-							Write-Host $QueryFile.Name -ForegroundColor Magenta
-							Invoke-SqlCommand -Server $OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Username $SQLuser -Password $SQLpass -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 						}
 						continue
 					}
@@ -618,11 +659,19 @@ Function SQL-Queries
 				}
 				catch
 				{
-					Write-Host "       Error running SQL query: $QueryFileName
+					Write-Console "       Error running SQL query: $QueryFileName
 $_
 " -ForegroundColor Red
 					$_ | Export-Csv -Path "$OutputFileName" -NoTypeInformation
-					"$(Time-Stamp)Error running SQL query: $QueryFileName `n$_" | Out-File $OutputPath\Error.log -Append
+					#potential error code
+					#use continue or break keywords
+					$e = $_.Exception
+					$line = $_.InvocationInfo.ScriptLineNumber
+					$msg = $e.Message
+					
+					Write-Verbose "Caught Exception: $e :: Message: $msg :: at line: $line"
+					$details = "$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line"
+					"$(Invoke-TimeStamp)Error running SQL query: $QueryFileName `n$details" | Out-File $OutputPath\Error.log -Append
 				}
 				
 			}
@@ -641,8 +690,23 @@ $_
 	if ($answer5 -eq "Domain")
 	{
 		$Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $SQLuser2, $SQLpass2
-		$command = "-NoProfile -NoExit -Command cd '$ScriptPath';. '$ScriptPath\$scriptname' -SQLOnlyDW; exit 0"
-		Start-Process powershell.exe ($command) -Credential $Credential -Wait -NoNewWindow
+		$command = "-NoProfile -NoExit -Command `"cd '$ScriptPath';. '$ScriptPath\$scriptname' -SQLOnlyDW; exit 0`""
+		$error.clear()
+		try
+		{
+			Start-Process powershell.exe ($command) -Credential $Credential -Wait -NoNewWindow
+		}
+		catch
+		{
+			if ($error -match "The directory name is invalid")
+			{
+				Write-Warning "Unable to access folder in $((Get-Location).Path), move to a more publicly accessible location."
+			}
+			else
+			{
+				Write-Warning "$error"
+			}
+		}
 		return
 	}
 	elseif ($answer4 -eq "y")
@@ -660,8 +724,8 @@ $_
 		"Path to query files not found ($QueriesPath).  Terminating...." | Out-File $OutputPath\Error.log -Append
 		break
 	}
-	Write-Host "`n================================"
-	Write-Host "Running SQL Queries against Data Warehouse"
+	Write-Console "`n================================"
+	Write-Console "Running SQL Queries against Data Warehouse"
 	try
 	{
 		$timeout = 30
@@ -669,10 +733,11 @@ $_
 		{
 			$initialCheck = Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
 		}
-		else
+<#		else
 		{
 			$initialCheck = Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Username $SQLuser2 -Password $SQLpass2 -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
 		}
+		#>
 		
 		if ($initialCheck)
 		{
@@ -691,11 +756,11 @@ $_
 	{
 		Write-Warning $_
 	}
-	Write-Host " Current query timeout: $timeout seconds ($($timeout/60) minutes) \ Current query job timeout: $jobtimeout seconds ($($jobtimeout/60) minutes)" -ForegroundColor Gray
-	Write-Host "  Gathering query files located here: $QueriesPath" -ForegroundColor DarkGray
+	Write-Console " Current query timeout: $timeout seconds ($($timeout/60) minutes) \ Current query job timeout: $jobtimeout seconds ($($jobtimeout/60) minutes)" -ForegroundColor Gray
+	Write-Console "  Gathering query files located here: $QueriesPath" -ForegroundColor DarkGray
 	$QueryFiles = Get-ChildItem -Path $QueriesPath -Filter "*.sql" ###BH Remove Where for Filter left
 	$QueryFilesCount = $QueryFiles.Count
-	Write-Host "   Found ($QueryFilesCount) queries" -ForegroundColor Green
+	Write-Console "   Found ($QueryFilesCount) queries" -ForegroundColor Green
 	FOREACH ($QueryFile in $QueryFiles)
 	{
 		try
@@ -710,24 +775,25 @@ $_
 				#This runs all queries with Perf in the name, as a job
 				if ($QueryFileName -match 'Perf')
 				{
-					Write-Host "     Running query job: " -ForegroundColor Cyan -NoNewline
-					Write-Host $QueryFile.Name -ForegroundColor Magenta
+					Write-Console "     Running query job: " -ForegroundColor Cyan -NoNewline
+					Write-Console $QueryFile.Name -ForegroundColor Magenta
 					Start-Job -Name "getPerf_DW-$($QueryFile.Name)" -InitializationScript $InvokeSQLcmdFunction -ScriptBlock $DWScriptBlock | Out-Null
 				}
 				elseif ($QueryFileName -match 'Event')
 				{
-					Write-Host "     Running query job: " -ForegroundColor Cyan -NoNewline
-					Write-Host $QueryFile.Name -ForegroundColor Magenta
+					Write-Console "     Running query job: " -ForegroundColor Cyan -NoNewline
+					Write-Console $QueryFile.Name -ForegroundColor Magenta
 					Start-Job -Name "getEvent_DW-$($QueryFile.Name)" -InitializationScript $InvokeSQLcmdFunction -ScriptBlock $DWScriptBlock | Out-Null
 				}
 				else
 				{
-					Write-Host "     Running query: " -ForegroundColor Cyan -NoNewline
-					Write-Host $QueryFile.Name -ForegroundColor Magenta
+					Write-Console "     Running query: " -ForegroundColor Cyan -NoNewline
+					Write-Console $QueryFile.Name -ForegroundColor Magenta
 					Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 				}
 				continue
 			}
+<#			
 			else
 			{
 				$DWScriptBlock = [scriptblock]::Create(@"
@@ -736,31 +802,32 @@ $_
 				#This runs all queries with Perf in the name, as a job
 				if ($QueryFileName -match 'Perf')
 				{
-					Write-Host "     Running query job: " -ForegroundColor Cyan -NoNewline
-					Write-Host $QueryFile.Name -ForegroundColor Magenta
+					Write-Console "     Running query job: " -ForegroundColor Cyan -NoNewline
+					Write-Console $QueryFile.Name -ForegroundColor Magenta
 					Start-Job -Name "getPerf_DW-$($QueryFile.Name)" -InitializationScript $InvokeSQLcmdFunction -ScriptBlock $DWScriptBlock | Out-Null
 				}
 				elseif ($QueryFileName -match 'Event')
 				{
-					Write-Host "     Running query job: " -ForegroundColor Cyan -NoNewline
-					Write-Host $QueryFile.Name -ForegroundColor Magenta
+					Write-Console "     Running query job: " -ForegroundColor Cyan -NoNewline
+					Write-Console $QueryFile.Name -ForegroundColor Magenta
 					Start-Job -Name "getEvent_DW-$($QueryFile.Name)" -InitializationScript $InvokeSQLcmdFunction -ScriptBlock $DWScriptBlock | Out-Null
 				}
 				else
 				{
-					Write-Host "     Running query: " -ForegroundColor Cyan -NoNewline
-					Write-Host $QueryFile.Name -ForegroundColor Magenta
+					Write-Console "     Running query: " -ForegroundColor Cyan -NoNewline
+					Write-Console $QueryFile.Name -ForegroundColor Magenta
 					Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Username $SQLuser2 -Password $SQLpass2 -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 				}
 				continue
 			}
+			#>
 		}
 		catch
 		{
-			Write-Host "       Error running SQL query: $QueryFileName
+			Write-Console "       Error running SQL query: $QueryFileName
 $_
 " -ForegroundColor Red
-			"$(Time-Stamp)Error running SQL query: $QueryFileName - `n$_" | Out-File $OutputPath\Error.log -Append
+			"$(Invoke-TimeStamp)Error running SQL query: $QueryFileName - `n$_" | Out-File $OutputPath\Error.log -Append
 			$_ | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 		}
 	}

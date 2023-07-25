@@ -1,184 +1,196 @@
-Function DataCollector-Menu
+Function Invoke-DataCollectorMenu
 {
-	function Main-Menu
+	function Invoke-MainMenu
 	{
 		param (
 			[string]$Title = 'System Center Operations Manager: Data Collector'
 		)
 		Clear-Host
-		Write-Host "================ " -NoNewline -ForegroundColor DarkYellow
-		sleep -Milliseconds 120
-		Write-Host $Title -ForegroundColor Cyan -NoNewline
-		sleep -Milliseconds 120
-		Write-Host " ================" -ForegroundColor DarkYellow
-		sleep -Milliseconds 120
+		Write-Console "================ " -NoNewline -ForegroundColor DarkYellow
+		Start-Sleep -Milliseconds 120
+		Write-Console $Title -ForegroundColor Cyan -NoNewline
+		Start-Sleep -Milliseconds 120
+		Write-Console " ================" -ForegroundColor DarkYellow
+		Start-Sleep -Milliseconds 120
 		
-		Write-Host "1" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "1" -NoNewline -ForegroundColor Green
-		Write-Host "`' to gather as much data as possible."
+		Write-Console "1" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "1" -NoNewline -ForegroundColor Green
+		Write-Console "`' to gather as much data as possible."
 		
-		Write-Host "2" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2" -NoNewline -ForegroundColor Green
-		Write-Host "`' to gather information from specific Windows Agent(s)."
+		Write-Console "2" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2" -NoNewline -ForegroundColor Green
+		Write-Console "`' to gather information from specific Windows Agent(s)."
 		
-		Write-Host "3" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "3" -NoNewline -ForegroundColor Green
-		Write-Host "`' to gather minimum information."
+		Write-Console "3" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "3" -NoNewline -ForegroundColor Green
+		Write-Console "`' to gather minimum information."
 		
-		Write-Host "4" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "4" -NoNewline -ForegroundColor Green
-		Write-Host "`' to update to the latest release of the Data Collector on GitHub."
+		Write-Console "4" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "4" -NoNewline -ForegroundColor Green
+		Write-Console "`' to update to the latest release of the Data Collector on GitHub."
 		
-		Write-Host "Q" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "Q" -NoNewline -ForegroundColor Green
-		Write-Host "`' to Quit."
+		Write-Console "Q" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "Q" -NoNewline -ForegroundColor Green
+		Write-Console "`' to Quit."
 	}
-	function Sub-Menu-All
+	function Invoke-SubMenuAll
 	{
 		param (
 			[string]$Title = 'System Center Operations Manager: Data Collector - Gather Everything'
 		)
 		Clear-Host
-		Write-Host "================ " -NoNewline -ForegroundColor DarkYellow
-		sleep -Milliseconds 120
-		Write-Host $Title -ForegroundColor Cyan -NoNewline
-		sleep -Milliseconds 120
-		Write-Host " ================" -ForegroundColor DarkYellow
-		sleep -Milliseconds 120
+		Write-Console "================ " -NoNewline -ForegroundColor DarkYellow
+		Start-Sleep -Milliseconds 120
+		Write-Console $Title -ForegroundColor Cyan -NoNewline
+		Start-Sleep -Milliseconds 120
+		Write-Console " ================" -ForegroundColor DarkYellow
+		Start-Sleep -Milliseconds 120
 		
-		Write-Host "1a" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "1a" -NoNewline -ForegroundColor Green
-		Write-Host "`' to also gather information from specific Windows Agent(s)."
+		Write-Console "1a" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "1a" -NoNewline -ForegroundColor Green
+		Write-Console "`' to also gather information from specific Windows Agent(s)."
 		
-		Write-Host "1b" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "1b" -NoNewline -ForegroundColor Green
-		Write-Host "`' to continue and start script."
+		Write-Console "1b" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "1b" -NoNewline -ForegroundColor Green
+		Write-Console "`' to continue and start script."
 		
-		Write-Host "1c" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "1c" -NoNewline -ForegroundColor Green
-		Write-Host "`' to run the SCOM Linux Data Collector."
+		Write-Console "1c" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "1c" -NoNewline -ForegroundColor Green
+		Write-Console "`' to run the SCOM Linux Data Collector."
 		
-		Write-Host " Q" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "Q" -NoNewline -ForegroundColor Green
-		Write-Host "`' to Quit."
+		Write-Console " Q" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "Q" -NoNewline -ForegroundColor Green
+		Write-Console "`' to Quit."
 	}
-	function Sub-Menu-SpecificAgents
+	function Invoke-SubMenuSpecificAgents
 	{
 		param (
 			[string]$Title = 'System Center Operations Manager: Data Collector - Specific Agents'
 		)
 		Clear-Host
-		Write-Host "================ " -NoNewline -ForegroundColor DarkYellow
-		sleep -Milliseconds 120
-		Write-Host $Title -ForegroundColor Cyan -NoNewline
-		sleep -Milliseconds 120
-		Write-Host " ================" -ForegroundColor DarkYellow
-		sleep -Milliseconds 120
+		Write-Console "================ " -NoNewline -ForegroundColor DarkYellow
+		Start-Sleep -Milliseconds 120
+		Write-Console $Title -ForegroundColor Cyan -NoNewline
+		Start-Sleep -Milliseconds 120
+		Write-Console " ================" -ForegroundColor DarkYellow
+		Start-Sleep -Milliseconds 120
 		
-		Write-Host "2a" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2a" -NoNewline -ForegroundColor Green
-		Write-Host "`' to gather minimum information from Windows Agent(s) + All Management Servers in Management Group."
+		Write-Console "2a" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2a" -NoNewline -ForegroundColor Green
+		Write-Console "`' to gather minimum information from Windows Agent(s) + All Management Servers in Management Group."
 		
-		Write-Host "2b" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2b" -NoNewline -ForegroundColor Green
-		Write-Host "`' to gather Multiple types of information from Windows Agent(s) + All Management Servers in Management Group."
+		Write-Console "2b" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2b" -NoNewline -ForegroundColor Green
+		Write-Console "`' to gather Multiple types of information from Windows Agent(s) + All Management Servers in Management Group."
 		
-		Write-Host "2c" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2c" -NoNewline -ForegroundColor Green
-		Write-Host "`' to gather Event Logs Only (Application, System, Operations Manager) from Windows Agent(s) + All Management Servers in Management Group."
+		Write-Console "2c" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2c" -NoNewline -ForegroundColor Green
+		Write-Console "`' to gather Event Logs Only (Application, System, Operations Manager) from Windows Agent(s) + All Management Servers in Management Group."
 		
-		Write-Host "2d" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2d" -NoNewline -ForegroundColor Green
-		Write-Host "`' to gather Run As Accounts Only + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
+		Write-Console "2d" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2d" -NoNewline -ForegroundColor Green
+		Write-Console "`' to gather Run As Accounts Only + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
 		
-		Write-Host "2e" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2e" -NoNewline -ForegroundColor Green
-		Write-Host "`' to check Certificates Only for specific Windows Agent(s) + All Management Servers in Management Group."
+		Write-Console "2e" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2e" -NoNewline -ForegroundColor Green
+		Write-Console "`' to check Certificates Only for specific Windows Agent(s) + All Management Servers in Management Group."
 		
-		Write-Host "2f" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2f" -NoNewline -ForegroundColor Green
-		Write-Host "`' to check Check TLS against specific Windows Agent(s) and All Management Servers in Management Group."
+		Write-Console "2f" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2f" -NoNewline -ForegroundColor Green
+		Write-Console "`' to check Check TLS against specific Windows Agent(s) and All Management Servers in Management Group."
 		
-		Write-Host "2g" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2g" -NoNewline -ForegroundColor Green
-		Write-Host "`' to check Export Management Packs + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
+		Write-Console "2g" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2g" -NoNewline -ForegroundColor Green
+		Write-Console "`' to check Export Management Packs + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
 		
-		Write-Host "2h" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2h" -NoNewline -ForegroundColor Green
-		Write-Host "`' to export Rules and Monitors + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
+		Write-Console "2h" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2h" -NoNewline -ForegroundColor Green
+		Write-Console "`' to export Rules and Monitors + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
 		
-		Write-Host "2i" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2i" -NoNewline -ForegroundColor Green
-		Write-Host "`' to export MSInfo32 information from specific Windows Agent(s) + All Management Servers in Management Group."
+		Write-Console "2i" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2i" -NoNewline -ForegroundColor Green
+		Write-Console "`' to export MSInfo32 information from specific Windows Agent(s) + All Management Servers in Management Group."
 		
-		Write-Host "2j" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2j" -NoNewline -ForegroundColor Green
-		Write-Host "`' to export Group Policy Results from specific Windows Agent(s) and All Management Servers in Management Group."
+		Write-Console "2j" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2j" -NoNewline -ForegroundColor Green
+		Write-Console "`' to export Group Policy Results from specific Windows Agent(s) and All Management Servers in Management Group."
 		
-		Write-Host "2k" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2k" -NoNewline -ForegroundColor Green
-		Write-Host "`' to gather SQL Error Logs + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
+		Write-Console "2k" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2k" -NoNewline -ForegroundColor Green
+		Write-Console "`' to gather SQL Error Logs + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
 		
-		Write-Host "2l" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "2l" -NoNewline -ForegroundColor Green
-		Write-Host "`' to ping the Management Server(s) in Management Group from each Windows Agent(s) to verify connectability (output at bottom of `'General Information.txt`' file in zip output) + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
+		Write-Console "2l" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "2l" -NoNewline -ForegroundColor Green
+		Write-Console "`' to ping the Management Server(s) in Management Group from each Windows Agent(s) to verify connectability (output at bottom of `'General Information.txt`' file in zip output) + get minimum information from specific Windows Agent(s) and All Management Servers in Management Group."
 		
-		Write-Host " Q" -NoNewline -ForegroundColor Green
-		Write-Host ": Type `'" -NoNewline
-		Write-Host "Q" -NoNewline -ForegroundColor Green
-		Write-Host "`' to Quit."
+		Write-Console " Q" -NoNewline -ForegroundColor Green
+		Write-Console ": Type `'" -NoNewline
+		Write-Console "Q" -NoNewline -ForegroundColor Green
+		Write-Console "`' to Quit."
 	}
 	
 	
 	do
 	{
-		Main-Menu
+		Invoke-MainMenu
 		$selection = $null
-		$selection = Read-Host "Please make a selection"
+		do
+		{
+			$selection = Read-Host "Please make a selection"
+		}
+		until ($selection -match "\d")
 		switch ($selection)
 		{
 			'1' {
 				
 				do
 				{
-					Sub-Menu-All
-					Write-Host "`n   NOTE:" -ForegroundColor Yellow
-					Write-Host "    Option 1 does not gather the following: " -NoNewLine
-					Write-Host "-MSInfo32" -NoNewLine -ForegroundColor DarkGreen
-					Write-Host " and " -NoNewLine
-					Write-Host "-GetNotificationSubscriptions" -NoNewLine -ForegroundColor DarkGreen
-					Write-Host "`n     To gather these you will need to run the data collector with its switches:`n   " -NoNewLine
-					Write-Host "   .\DataCollector-v#.#.#.ps1" -NoNewLine -ForegroundColor Yellow
-					Write-Host " -All -MSInfo32 -GetNotificationSubscriptions`n`n" -NoNewLine -ForegroundColor Gray
+					Invoke-SubMenuAll
+					Write-Console "`n   NOTE:" -ForegroundColor Yellow
+					Write-Console "    Option 1 does not gather the following: " -NoNewLine
+					Write-Console "-MSInfo32" -NoNewLine -ForegroundColor DarkGreen
+					Write-Console " and " -NoNewLine
+					Write-Console "-GetNotificationSubscriptions" -NoNewLine -ForegroundColor DarkGreen
+					Write-Console "`n     To gather these you will need to run the data collector with its switches:`n   " -NoNewLine
+					Write-Console "   .\DataCollector-v#.#.#.ps1" -NoNewLine -ForegroundColor Yellow
+					Write-Console " -All -MSInfo32 -GetNotificationSubscriptions`n`n" -NoNewLine -ForegroundColor Gray
 					$selection = $null
-					$selection = Read-Host "Please make a selection"
+					do
+					{
+						$selection = Read-Host "Please make a selection"
+					}
+					until ($selection -match "\d[a-z]")
 					switch ($selection)
 					{
 						'1a'
 						{
 							[string]$Servers = $null
-							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
+							do
+							{
+								[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
+							}
+							until ($Servers)
 							do
 							{
 								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
@@ -186,7 +198,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -GetUserRoles
 								}
@@ -197,7 +209,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
 								}
@@ -235,16 +247,15 @@ Function DataCollector-Menu
 							{
 								$SCXAgents = Read-Host "Type the SCX Agents (comma separated) you would like to run the Linux Data Collector against"
 								$SCXUsername = Read-Host "Type the Username to be used to gather data via SSH (preferably high user rights)"
-								$SCXPassword = Read-Host "Type the Password to be used to gather data via SSH (optional)" -AsSecureString
 							}
 							until (($SCXAgents -and $SCXUsername) -or ($SCXAgents -and $SCXUsername -and $SCXPassword))
 							if ($PermissionforSQL -like 'y')
 							{
-								Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXPassword $SCXPassword -GetUserRoles
+								Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -GetUserRoles
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXPassword $SCXPassword -NoSQLPermission -GetUserRoles
+								Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -NoSQLPermission -GetUserRoles
 							}
 							
 						}
@@ -256,9 +267,13 @@ Function DataCollector-Menu
 			{
 				do
 				{
-					Sub-Menu-SpecificAgents
+					Invoke-SubMenuSpecificAgents
 					$selection = $null
-					$selection = Read-Host "Please make a selection"
+					do
+					{
+						$selection = Read-Host "Please make a selection"
+					}
+					until ($selection -match "\d[a-z]")
 					switch ($selection)
 					{
 						'2a' {
@@ -271,7 +286,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -Yes
 								}
@@ -282,7 +297,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -NoSQLPermission
 								}
@@ -293,7 +308,7 @@ Function DataCollector-Menu
 							}
 						}
 						'2b' {
-							Write-Host 'DO NOT USE :: NOT WORKING :: Options to choose from:
+							Write-Console 'DO NOT USE :: NOT WORKING :: Options to choose from:
 	graa = Run As Accounts
 	gel = Event Logs
 	cc = Check Certificates
@@ -314,9 +329,9 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
-									Start-ScomDataCollector -Servers $Servers ($argumentsforscript | % { [boolean]$_ }) -Yes
+									Start-ScomDataCollector -Servers $Servers ($argumentsforscript | ForEach-Object { [boolean]$_ }) -Yes
 								}
 								else
 								{
@@ -326,7 +341,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers $($argumentsforscript) -NoSQLPermission
 								}
@@ -347,7 +362,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -gel -Yes
 								}
@@ -359,7 +374,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -gel -NoSQLPermission
 								}
@@ -380,7 +395,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -graa -Yes
 								}
@@ -392,7 +407,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -graa -NoSQLPermission
 								}
@@ -412,7 +427,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -cc -Yes
 								}
@@ -424,7 +439,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -cc -NoSQLPermission
 								}
@@ -444,7 +459,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -ct -Yes
 								}
@@ -456,7 +471,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -ct -NoSQLPermission
 								}
@@ -476,7 +491,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -em -Yes
 								}
@@ -488,7 +503,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -em -NoSQLPermission
 								}
@@ -508,7 +523,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -gram -Yes
 								}
@@ -520,7 +535,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -gram -NoSQLPermission
 								}
@@ -540,7 +555,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -mi32 -Yes
 								}
@@ -552,7 +567,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -mi32 -NoSQLPermission
 								}
@@ -572,7 +587,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -gp -Yes
 								}
@@ -584,7 +599,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -gp -NoSQLPermission
 								}
@@ -604,7 +619,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -sql -Yes
 								}
@@ -616,7 +631,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -sql -NoSQLPermission
 								}
@@ -636,7 +651,7 @@ Function DataCollector-Menu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -PingAll -Yes
 								}
@@ -648,7 +663,7 @@ Function DataCollector-Menu
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								if ($Servers -ne $null)
+								if ($null -ne $Servers)
 								{
 									Start-ScomDataCollector -Servers $Servers -PingAll -NoSQLPermission
 								}
@@ -682,5 +697,5 @@ Function DataCollector-Menu
 		}
 		
 	}
-	until ($selection -ne $null)
+	until ($null -ne $selection)
 }

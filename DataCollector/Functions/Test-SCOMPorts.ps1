@@ -1,4 +1,4 @@
-function Test-SCOMPorts
+function Invoke-TestSCOMPorts
 {
 	param
 	(
@@ -38,9 +38,9 @@ function Test-SCOMPorts
 		An array of Servers, or alternatively you can pipe in objects from Get-SCOMAgent or Get-SCOMManagementServer.
 	
 	.EXAMPLE
-		PS C:\> Get-SCOMAgent | Where {$_.Name -match "IIS-server"} | .\Test-SCOMPorts
-		PS C:\> Get-SCOMManagementServer | .\Test-SCOMPorts
-		PS C:\> .\Test-SCOMPorts -Servers Agent1.contoso.com, SQL-Server.contoso.com
+		PS C:\> Get-SCOMAgent | Where {$_.Name -match "IIS-server"} | .\Invoke-TestSCOMPorts
+		PS C:\> Get-SCOMManagementServer | .\Invoke-TestSCOMPorts
+		PS C:\> .\Invoke-TestSCOMPorts -Servers Agent1.contoso.com, SQL-Server.contoso.com
 	
 	.NOTES
 		.AUTHOR
@@ -84,12 +84,12 @@ function Test-SCOMPorts
 	{
 		$DestinationServer = $DestinationServer
 	}
-	Write-Output " "
-	Write-Output @"
+	Write-Console " "
+	Write-Console @"
 ================================
 Starting SCOM Port Checker
 "@
-Write-Host "  Running function:"
+	Write-Console "  Running function:"
 	function Check-SCOMPorts
 	{
 		param
@@ -101,9 +101,37 @@ Write-Host "  Running function:"
 					   Position = 1)]
 			[array]$SourceServer
 		)
+		function Write-Console
+		{
+			param
+			(
+				[Parameter(Position = 1)]
+				[string]$Text,
+				[Parameter(Position = 2)]
+				$ForegroundColor,
+				[Parameter(Position = 3)]
+				[switch]$NoNewLine
+			)
+			
+			if ([Environment]::UserInteractive)
+			{
+				if ($ForegroundColor)
+				{
+					Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+				}
+				else
+				{
+					Write-Host $Text -NoNewLine:$NoNewLine
+				}
+			}
+			else
+			{
+				Write-Output $Text
+			}
+		}
 		$payload = $null
 		$payload = @()
-		Write-Host "    $env:COMPUTERNAME" -ForegroundColor Cyan -NoNewLine
+		Write-Console "    $env:COMPUTERNAME" -ForegroundColor Cyan -NoNewLine
 		$ports = @{
 			"Management Server / Agent Port"   = 5723;
 			"Web Console / Console Port"	   = 5724;
@@ -133,7 +161,7 @@ Write-Host "  Running function:"
 			{
 				$tcp = $null
 				$tcp = Test-NetConnection -Computername $server -Port $port.Value -WarningAction SilentlyContinue
-				Write-Host '-' -ForegroundColor Green -NoNewline
+				Write-Console '-' -ForegroundColor Green -NoNewline
 				Switch ($($tcp.TcpTestSucceeded))
 				{
 					True { $payload += new-object psobject -property @{ Availability = 'Up'; 'Service Name' = $($port.Name); Port = $($port.Value); SourceServer = $env:COMPUTERNAME; DestinationServer = $server } }
@@ -143,7 +171,7 @@ Write-Host "  Running function:"
 			}
 			
 		}
-		Write-Host '> Complete!' -ForegroundColor Green
+		Write-Console '> Complete!' -ForegroundColor Green
 		return $payload
 	}
 	$sb = (get-item Function:Check-SCOMPorts).ScriptBlock
@@ -160,7 +188,7 @@ Write-Host "  Running function:"
 		
 	}
 	
-	$finalout = $scriptout | select 'Service Name', SourceServer, Port, Availability, DestinationServer | Sort-Object -Property @{
+	$finalout = $scriptout | Select-Object 'Service Name', SourceServer, Port, Availability, DestinationServer | Sort-Object -Property @{
 		expression = 'SourceServer'
 		descending = $false
 	}, @{
@@ -172,18 +200,18 @@ Write-Host "  Running function:"
 	}
 	if ($OutputType -eq 'CSV')
 	{
-		#Write-Host "Output to " -NoNewline -ForegroundColor Gray
-		#Write-Host $OutputFile -NoNewline -ForegroundColor Cyan
+		#Write-Console "Output to " -NoNewline -ForegroundColor Gray
+		#Write-Console $OutputFile -NoNewline -ForegroundColor Cyan
 		$finalout | Export-Csv -Path $OutputFile -NoTypeInformation
 	}
 	elseif ($OutputType -eq 'Text')
 	{
-		#Write-Host "Output to " -NoNewline -ForegroundColor Gray
-		#Write-Host $OutputFile -NoNewline -ForegroundColor Cyan
-		$finalout | ft * | Out-File $OutputFile
+		#Write-Console "Output to " -NoNewline -ForegroundColor Gray
+		#Write-Console $OutputFile -NoNewline -ForegroundColor Cyan
+		$finalout | Format-Table * | Out-File $OutputFile
 	}
 	elseif ($OutputType -eq 'Table')
 	{
-		$finalout | ft *
+		$finalout | Format-Table *
 	}
 }

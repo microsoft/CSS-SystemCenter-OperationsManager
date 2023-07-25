@@ -12,7 +12,7 @@ $finaloutput = @()
 foreach($data in $SQLServer)
 {
 $description = $data.Description -Replace('"',"'")
-$finaloutput += ("`~{0}`~ !.! `~{1} / {2}`~ !!!" -f $data.Build, (Get-Culture).TextInfo.ToTitleCase($description.Replace("`n",'')), $data.ReleaseDate).Replace("!.!","{").Replace("!!!","}").Replace("~",'"').Replace("`n",'')
+$finaloutput += ("`~{0}`~ !.! `~{1} / {2}`~ !!!" -f $data.Build, (Get-Culture).TextInfo.ToTitleCase($description.Replace("`n",'')), $data.ReleaseDate).Replace("!.!","{").Replace("!!!","}").Replace("~",'"').Replace("`n",'').Replace("–",'-')
 }
 Write-Host "Copied to Clipboard!" -ForegroundColor Green
 Set-Clipboard -Value $finaloutput

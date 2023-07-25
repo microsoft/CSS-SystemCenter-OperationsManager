@@ -1,4 +1,4 @@
-Function Wrap-Up
+Function Invoke-WrapUp
 {
 	param
 	(
@@ -10,32 +10,32 @@ Function Wrap-Up
 	{
 		if ($job.State -eq 'Running')
 		{
-			Write-Host "`nWaiting for SQL Query `'$($job.Name -split "-" | Select-Object -Last 1)`' to finish gathering data." -ForegroundColor Gray -NoNewline
+			Write-Console "`nWaiting for SQL Query `'$($job.Name -split "-" | Select-Object -Last 1)`' to finish gathering data." -ForegroundColor Gray -NoNewline
 		}
 		do
 		{
 			if ($job.State -eq 'Running')
 			{
-				Write-Host "." -ForegroundColor Gray -NoNewline
-				sleep 5
+				Write-Console "." -ForegroundColor Gray -NoNewline
+				Start-Sleep 5
 			}
 		}
 		until ($job.State -ne 'Running')
 	}
-	Write-Host " "
+	Write-Console " "
 	try
 	{
 		if (Test-Path $OutputPath\*.csv)
 		{
-			New-Item -Type Directory -Path $OutputPath\CSV -ErrorAction SilentlyContinue | out-null
+			New-Item -ItemType Directory -Path $OutputPath\CSV -ErrorAction SilentlyContinue | out-null
 			Move-Item $OutputPath\*.csv $OutputPath\CSV
 		}
-		if ((Get-ChildItem $OutputPath\CSV).Count -eq 0)
+		if ((Get-ChildItem $OutputPath\CSV -ErrorAction SilentlyContinue).Count -eq 0 -or (-Not ($(Resolve-Path "$OutputPath\CSV"))))
 		{
 			Remove-Item $OutputPath\CSV -Force -ErrorAction SilentlyContinue | out-null
 		}
-		$FolderNames = (Get-ChildItem "$OutputPath`\*.evtx" | Select-Object Name -ExpandProperty Name) | % { $_.split(".")[0] } | Select -Unique
-		$FolderNames | % {
+		$FolderNames = (Get-ChildItem "$OutputPath`\*.evtx" | Select-Object Name -ExpandProperty Name) | ForEach-Object { $_.split(".")[0] } | Select-Object -Unique
+		$FolderNames | ForEach-Object {
 			$currentServer = $_
 			mkdir "$OutputPath`\Event Logs\$currentServer" | Out-Null;
 			mkdir "$OutputPath`\Event Logs\$currentServer`\localemetadata\" | Out-Null;
@@ -56,9 +56,9 @@ Function Wrap-Up
 	{
 		Write-Warning $_
 	}
-	$fullfilepath = $OutputPath + '\datacollector-' + ((((Get-Content "$currentPath" | Select-String '.VERSION' -Context 1) | Select -First 1 $_.Context.PostContext) -split "`n")[2]).Trim().Split(" ")[0]
+	$fullfilepath = $OutputPath + '\datacollector-' + ((((Get-Content "$currentPath" | Select-String '.VERSION' -Context 1) | Select-Object -First 1 $_.Context.PostContext) -split "`n")[2]).Trim().Split(" ")[0]
 	#Write file to show script version in the SDC Results File.
-
+	
 	try
 	{
 		$EndTime = "$(Get-Date -Format "MMMM dd, yyyy @ h:mm tt") $((Get-TimeZone -ErrorAction SilentlyContinue).DisplayName)"
@@ -92,7 +92,7 @@ $EndTime
 	
 	#Zip output
 	$Error.Clear()
-	Write-Host "Creating zip file of all output data." -ForegroundColor DarkCyan
+	Write-Console "Creating zip file of all output data." -ForegroundColor DarkCyan
 	[Reflection.Assembly]::LoadWithPartialName("System.IO.Compression.FileSystem") | Out-Null
 	[System.AppDomain]::CurrentDomain.GetAssemblies() | Out-Null
 	$SourcePath = Resolve-Path $OutputPath
@@ -110,12 +110,12 @@ $EndTime
 		[string]$destfilename = "SDC_Results_$filedate`.zip"
 	}
 	
-	[string]$global:destfile = "$ScriptPath\$destfilename"
-	IF (Test-Path $global:destfile)
+	[string]$destfile = "$ScriptPath\$destfilename"
+	IF (Test-Path $destfile)
 	{
 		#File exists from a previous run on the same day - delete it
-		Write-Host "-Found existing zip file: $destfile.`n Deleting existing file." -ForegroundColor DarkGreen
-		Remove-Item $global:destfile -Force
+		Write-Console "-Found existing zip file: $destfile.`n Deleting existing file." -ForegroundColor DarkGreen
+		Remove-Item $destfile -Force
 	}
 	$compressionLevel = [System.IO.Compression.CompressionLevel]::Optimal
 	$includebasedir = $false
@@ -126,8 +126,8 @@ $EndTime
 	}
 	ELSE
 	{
-		Write-Host "-Cleaning up output directory." -ForegroundColor DarkCyan
+		Write-Console "-Cleaning up output directory." -ForegroundColor DarkCyan
 		Remove-Item $OutputPath -Recurse
-		Write-Host "--Saved zip file to: $global:destfile." -ForegroundColor Cyan
+		Write-Console "--Saved zip file to: $destfile." -ForegroundColor Cyan
 	}
 }

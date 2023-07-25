@@ -34,8 +34,8 @@ Function Get-RulesAndMonitors
 	
 	IF (!(Test-Path $OutputDirectory))
 	{
-		Write-Host "Output folder not found for ($OutputDirectory).  Creating folder..."
-		md $OutputDirectory
+		Write-Console "Output folder not found for ($OutputDirectory).  Creating folder..."
+		mkdir $OutputDirectory
 	}
 	Write-Verbose "Output path is ($OutputDirectory)"
 	
@@ -52,9 +52,9 @@ Function Get-RulesAndMonitors
 	try
 	{
 		#Get all the SCOM Rules
-		Write-Host "  Gathering all Rules in SCOM..." -ForegroundColor Green
+		Write-Console "  Gathering all Rules in SCOM..." -ForegroundColor Green
 		$Rules = Get-SCOMRule
-		Write-Host "   Found $($Rules.Count) rules" -ForegroundColor Gray
+		Write-Console "   Found $($Rules.Count) rules" -ForegroundColor Gray
 		#Create a hashtable of all the SCOM classes for faster retreival based on Class ID
 		$Classes = Get-SCOMClass
 		$ClassHT = @{ }
@@ -68,7 +68,7 @@ Function Get-RulesAndMonitors
 		$AlertWA = $HealthMP.GetModuleType("System.Health.GenerateAlert")
 		$AlertWAID = $AlertWA.Id
 		
-		Write-Host "    Gathering Properties from each Rule..." -ForegroundColor Green
+		Write-Console "    Gathering Properties from each Rule..." -ForegroundColor Green
 		$Error.Clear()
 		FOREACH ($Rule in $Rules)
 		{
@@ -214,27 +214,27 @@ Function Get-RulesAndMonitors
 			
 			#Create generic object and assign values  
 			$obj = New-Object -TypeName psobject
-			$obj | Add-Member -Type NoteProperty -Name "ID" -Value $RuleID
-			$obj | Add-Member -Type NoteProperty -Name "WorkFlowType" -Value "Rule"
-			$obj | Add-Member -Type NoteProperty -Name "DisplayName" -Value $RuleDisplayName
-			$obj | Add-Member -Type NoteProperty -Name "Name" -Value $RuleName
-			$obj | Add-Member -Type NoteProperty -Name "TargetDisplayName" -Value $TargetDisplayName
-			$obj | Add-Member -Type NoteProperty -Name "TargetName" -Value $TargetName
-			$obj | Add-Member -Type NoteProperty -Name "Category" -Value $Category
-			$obj | Add-Member -Type NoteProperty -Name "Enabled" -Value $Enabled
-			$obj | Add-Member -Type NoteProperty -Name "Alert" -Value $GenAlert
-			$obj | Add-Member -Type NoteProperty -Name "AlertName" -Value $AlertDisplayName
-			$obj | Add-Member -Type NoteProperty -Name "AlertPriority" -Value $AlertPriority
-			$obj | Add-Member -Type NoteProperty -Name "AlertSeverity" -Value $AlertSeverity
-			$obj | Add-Member -Type NoteProperty -Name "MPDisplayName" -Value $MPDisplayName
-			$obj | Add-Member -Type NoteProperty -Name "MPName" -Value $MPName
-			$obj | Add-Member -Type NoteProperty -Name "RuleDataSource" -Value $RuleDS
-			$obj | Add-Member -Type NoteProperty -Name "MonitorClassification" -Value ""
-			$obj | Add-Member -Type NoteProperty -Name "MonitorType" -Value ""
-			$obj | Add-Member -Type NoteProperty -Name "Description" -Value $Description
+			$obj | Add-Member -MemberType NoteProperty -Name "ID" -Value $RuleID
+			$obj | Add-Member -MemberType NoteProperty -Name "WorkFlowType" -Value "Rule"
+			$obj | Add-Member -MemberType NoteProperty -Name "DisplayName" -Value $RuleDisplayName
+			$obj | Add-Member -MemberType NoteProperty -Name "Name" -Value $RuleName
+			$obj | Add-Member -MemberType NoteProperty -Name "TargetDisplayName" -Value $TargetDisplayName
+			$obj | Add-Member -MemberType NoteProperty -Name "TargetName" -Value $TargetName
+			$obj | Add-Member -MemberType NoteProperty -Name "Category" -Value $Category
+			$obj | Add-Member -MemberType NoteProperty -Name "Enabled" -Value $Enabled
+			$obj | Add-Member -MemberType NoteProperty -Name "Alert" -Value $GenAlert
+			$obj | Add-Member -MemberType NoteProperty -Name "AlertName" -Value $AlertDisplayName
+			$obj | Add-Member -MemberType NoteProperty -Name "AlertPriority" -Value $AlertPriority
+			$obj | Add-Member -MemberType NoteProperty -Name "AlertSeverity" -Value $AlertSeverity
+			$obj | Add-Member -MemberType NoteProperty -Name "MPDisplayName" -Value $MPDisplayName
+			$obj | Add-Member -MemberType NoteProperty -Name "MPName" -Value $MPName
+			$obj | Add-Member -MemberType NoteProperty -Name "RuleDataSource" -Value $RuleDS
+			$obj | Add-Member -MemberType NoteProperty -Name "MonitorClassification" -Value ""
+			$obj | Add-Member -MemberType NoteProperty -Name "MonitorType" -Value ""
+			$obj | Add-Member -MemberType NoteProperty -Name "Description" -Value $Description
 			$RuleReport += $obj
 		}
-		Write-Host "     Generating Rules (CSV and TXT) at ($OutputDirectory)..." -ForegroundColor Magenta
+		Write-Console "     Generating Rules (CSV and TXT) at ($OutputDirectory)..." -ForegroundColor Magenta
 		$RuleReport | Format-List * | Out-File $OutputDirectory\Rules.txt
 		$RuleReport | Export-Csv $OutputDirectory\Rules.csv -NoTypeInformation
 		
@@ -248,21 +248,21 @@ Function Get-RulesAndMonitors
 		$msg = $e.Message
 		
 		Write-Verbose "Caught Exception: $e :: Message: $msg :: at line: $line"
-		"$(Time-Stamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+		"$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
 	}
 	#=========================
 	# End Rules section
-	Write-Host " "
+	Write-Console " "
 	# Begin Monitors section
 	#=========================
 	try
 	{
 		#Get all the SCOM Monitors
-		Write-Host "  Gathering all Monitors in SCOM..." -ForegroundColor Green
+		Write-Console "  Gathering all Monitors in SCOM..." -ForegroundColor Green
 		$Monitors = Get-SCOMMonitor
-		Write-Host "   Found $($Monitors.Count) monitors" -ForegroundColor Gray
+		Write-Console "   Found $($Monitors.Count) monitors" -ForegroundColor Gray
 		#Loop through each monitor and get properties
-		Write-Host "    Gathering Properties from each Monitor..." -ForegroundColor Green
+		Write-Console "    Gathering Properties from each Monitor..." -ForegroundColor Green
 		FOREACH ($Monitor in $Monitors)
 		{
 			[string]$MonitorDisplayName = $Monitor.DisplayName
@@ -309,28 +309,28 @@ Function Get-RulesAndMonitors
 			
 			#Create generic object and assign values  
 			$obj = New-Object -TypeName psobject
-			$obj | Add-Member -Type NoteProperty -Name "ID" -Value $MonitorID
-			$obj | Add-Member -Type NoteProperty -Name "WorkFlowType" -Value "Monitor"
-			$obj | Add-Member -Type NoteProperty -Name "DisplayName" -Value $MonitorDisplayName
-			$obj | Add-Member -Type NoteProperty -Name "Name" -Value $MonitorName
-			$obj | Add-Member -Type NoteProperty -Name "TargetDisplayName" -Value $TargetDisplayName
-			$obj | Add-Member -Type NoteProperty -Name "TargetName" -Value $TargetName
-			$obj | Add-Member -Type NoteProperty -Name "Category" -Value $Category
-			$obj | Add-Member -Type NoteProperty -Name "Enabled" -Value $Enabled
-			$obj | Add-Member -Type NoteProperty -Name "Alert" -Value $GenAlert
-			$obj | Add-Member -Type NoteProperty -Name "AlertName" -Value $AlertDisplayName
-			$obj | Add-Member -Type NoteProperty -Name "AlertPriority" -Value $AlertPriority
-			$obj | Add-Member -Type NoteProperty -Name "AlertSeverity" -Value $AlertSeverity
-			$obj | Add-Member -Type NoteProperty -Name "MPDisplayName" -Value $MPDisplayName
-			$obj | Add-Member -Type NoteProperty -Name "MPName" -Value $MPName
-			$obj | Add-Member -Type NoteProperty -Name "RuleDataSource" -Value ""
-			$obj | Add-Member -Type NoteProperty -Name "MonitorClassification" -Value $MonitorClassification
-			$obj | Add-Member -Type NoteProperty -Name "MonitorType" -Value $MonitorType
-			$obj | Add-Member -Type NoteProperty -Name "Description" -Value $Description
+			$obj | Add-Member -MemberType NoteProperty -Name "ID" -Value $MonitorID
+			$obj | Add-Member -MemberType NoteProperty -Name "WorkFlowType" -Value "Monitor"
+			$obj | Add-Member -MemberType NoteProperty -Name "DisplayName" -Value $MonitorDisplayName
+			$obj | Add-Member -MemberType NoteProperty -Name "Name" -Value $MonitorName
+			$obj | Add-Member -MemberType NoteProperty -Name "TargetDisplayName" -Value $TargetDisplayName
+			$obj | Add-Member -MemberType NoteProperty -Name "TargetName" -Value $TargetName
+			$obj | Add-Member -MemberType NoteProperty -Name "Category" -Value $Category
+			$obj | Add-Member -MemberType NoteProperty -Name "Enabled" -Value $Enabled
+			$obj | Add-Member -MemberType NoteProperty -Name "Alert" -Value $GenAlert
+			$obj | Add-Member -MemberType NoteProperty -Name "AlertName" -Value $AlertDisplayName
+			$obj | Add-Member -MemberType NoteProperty -Name "AlertPriority" -Value $AlertPriority
+			$obj | Add-Member -MemberType NoteProperty -Name "AlertSeverity" -Value $AlertSeverity
+			$obj | Add-Member -MemberType NoteProperty -Name "MPDisplayName" -Value $MPDisplayName
+			$obj | Add-Member -MemberType NoteProperty -Name "MPName" -Value $MPName
+			$obj | Add-Member -MemberType NoteProperty -Name "RuleDataSource" -Value ""
+			$obj | Add-Member -MemberType NoteProperty -Name "MonitorClassification" -Value $MonitorClassification
+			$obj | Add-Member -MemberType NoteProperty -Name "MonitorType" -Value $MonitorType
+			$obj | Add-Member -MemberType NoteProperty -Name "Description" -Value $Description
 			$MonitorReport += $obj
 		}
 		
-		Write-Host "     Generating Monitors (CSV and TXT) at ($OutputDirectory)..." -ForegroundColor Magenta
+		Write-Console "     Generating Monitors (CSV and TXT) at ($OutputDirectory)..." -ForegroundColor Magenta
 		$MonitorReport | Format-List * | Out-File $OutputDirectory\Monitors.txt
 		$MonitorReport | Export-Csv $OutputDirectory\Monitors.csv -NoTypeInformation
 	}
@@ -343,7 +343,7 @@ Function Get-RulesAndMonitors
 		$msg = $e.Message
 		
 		Write-Verbose "Get-RulesAndMonitors - Caught Exception: $e :: Message: $msg :: at line: $line"
-		"$(Time-Stamp)Get-RulesAndMonitors - Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+		"$(Invoke-TimeStamp)Get-RulesAndMonitors - Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
 	}
 	#=========================
 	# End Monitors section

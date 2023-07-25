@@ -1,11 +1,11 @@
-Function Get-BestPractices
+Function Invoke-GetBestPractices
 {
 	[cmdletbinding()]
 	param ([String[]]$Servers)
 	begin
 	{
 		# Updated on 10/26/2022
-		Function Time-Stamp
+		Function Invoke-TimeStamp
 		{
 			$TimeStamp = Get-Date -Format "MM/dd/yyyy hh:mm:ss tt"
 			return "$TimeStamp - "
@@ -19,7 +19,7 @@ Function Get-BestPractices
 			$msg = $e.Message
 			
 			Write-Warning "Caught Exception: $e :: Message: $msg :: at line: $line"
-			"$(Time-Stamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+			"$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
 		}
 		if (!$Servers)
 		{
@@ -33,19 +33,49 @@ Detected Issues / Best Practices for SCOM
 	}
 	PROCESS
 	{
-		function Inner-GetBestPractices
+		function Invoke-InnerGetBestPractices
 		{
 			[CmdletBinding()]
 			param ()
 			
-			Function Time-Stamp
+			Function Invoke-TimeStamp
 			{
 				$TimeStamp = Get-Date -Format "MM/dd/yyyy hh:mm:ss tt"
 				return "$TimeStamp - "
 			}
+			
+			function Write-Console
+			{
+				param
+				(
+					[Parameter(Position = 1)]
+					[string]$Text,
+					[Parameter(Position = 2)]
+					$ForegroundColor,
+					[Parameter(Position = 3)]
+					[switch]$NoNewLine
+				)
+				
+				if ([Environment]::UserInteractive)
+				{
+					if ($ForegroundColor)
+					{
+						Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+					}
+					else
+					{
+						Write-Host $Text -NoNewLine:$NoNewLine
+					}
+				}
+				else
+				{
+					Write-Output $Text
+				}
+			}
+			
 			Write-Verbose "========================================"
-			Write-Verbose "$(Time-Stamp)  Working on: $env:COMPUTERNAME"
-			$script:bestpractice = @()
+			Write-Verbose "$(Invoke-TimeStamp)  Working on: $env:COMPUTERNAME"
+			$bestpractice = @()
 			if ($OutputPath)
 			{
 				$OutputResolvedPath = Resolve-Path $OutputPath -ErrorAction SilentlyContinue
@@ -55,44 +85,44 @@ Detected Issues / Best Practices for SCOM
 				$OutputResolvedPath = $false
 			}
 			
-			Write-Verbose "$(Time-Stamp)Checking the Operations Manager Event log for 33333 event ids and messages like: *Violation of PRIMARY KEY constraint 'PK_StateChangeEvent'. Cannot insert duplicate key in object 'dbo.StateChangeEvent'. The duplicate key value is*"
+			Write-Verbose "$(Invoke-TimeStamp)Checking the Operations Manager Event log for 33333 event ids and messages like: *Violation of PRIMARY KEY constraint 'PK_StateChangeEvent'. Cannot insert duplicate key in object 'dbo.StateChangeEvent'. The duplicate key value is*"
 			$events = (Get-EventLog -LogName 'Operations Manager' -Source 'DataAccessLayer' -ErrorAction SilentlyContinue | Where-Object { $_.EventID -eq 33333 })
 			Write-Host '-' -NoNewline -ForegroundColor Green
 			# If Event 33333 found in the OperationsManager Event Log, do the below
 			if (($events.Message -like "*Violation of PRIMARY KEY constraint 'PK_StateChangeEvent'. Cannot insert duplicate key in object 'dbo.StateChangeEvent'. The duplicate key value is*") -and ($events.Message -like "*f1baeb56-8cce-f8c7-79ae-d69796c9d926*"))
 			{
-				$message = $events | %{ ($_ | Select-Object -Property Message -ExpandProperty Message) }
+				$message = $events | ForEach-Object{ ($_ | Select-Object -Property Message -ExpandProperty Message) }
 				$matches = $message -split "," | select-string "MonitorId=(.*)"
 				$match = $matches.matches.groups[1].value.TrimEnd(")")
-				$script:bestpractice += "$env:COMPUTERNAME : Found $($message.count) issues with the Event ID 33333 (Monitor Id: $match), see the following article:`n   https://kevinholman.com/2017/05/29/stop-healthservice-restarts-in-scom-2016/"
-				Write-Verbose "$(Time-Stamp)$env:COMPUTERNAME : Found $($message.count) issues with the Event ID 33333 (Monitor Id: $match), see the following article:`n   https://kevinholman.com/2017/05/29/stop-healthservice-restarts-in-scom-2016/"
+				$bestpractice += "$env:COMPUTERNAME : Found $($message.count) issues with the Event ID 33333 (Monitor Id: $match), see the following article:`n   https://kevinholman.com/2017/05/29/stop-healthservice-restarts-in-scom-2016/"
+				Write-Verbose "$(Invoke-TimeStamp)$env:COMPUTERNAME : Found $($message.count) issues with the Event ID 33333 (Monitor Id: $match), see the following article:`n   https://kevinholman.com/2017/05/29/stop-healthservice-restarts-in-scom-2016/"
 				
-				Write-Host "-" -NoNewline -ForegroundColor Green
+				Write-Console "-" -NoNewline -ForegroundColor Green
 			}
 			# Check if Async Notification Channel Issue is Present
-			Write-Verbose "$(Time-Stamp)Check if Async Notification Channel Issue is Present"
+			Write-Verbose "$(Invoke-TimeStamp)Check if Async Notification Channel Issue is Present"
 			$AsyncEvents = (Get-EventLog -LogName 'Operations Manager' -Source 'Health Service Modules' -ErrorAction SilentlyContinue | Where-Object { $_.EventID -eq 21410 })
 			if ($AsyncEvents.Message -like "*The process could not be created because the maximum number of asynchronous responses*")
 			{
-				$AsyncMessage = $AsyncEvents | %{ ($_ | Select-Object -Property Message -ExpandProperty Message) }
+				$AsyncMessage = $AsyncEvents | ForEach-Object{ ($_ | Select-Object -Property Message -ExpandProperty Message) }
 				$AsyncMatches = $AsyncMessage -split "," | select-string "(.*)"
 				$AsyncMatch = $AsyncMatches.matches.groups[1].value.TrimEnd(")")
-				$script:bestpractice += "$env:COMPUTERNAME : Found Event ID 21410, regarding issue with asynchronous responses for Command Notification Channel. Consider increasing the registry key (HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Modules\Global\Command Executer\AsyncProcessLimit or HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Modules\Global\AsyncProcessLimit) between 5 (default) and 100 (max).`n    Current Async responses possible: '$AsyncMatch'`n      https://kevinholman.com/2021/08/25/what-account-will-command-channel-notifications-run-as-in-scom/"
-				Write-Verbose "$(Time-Stamp)$env:COMPUTERNAME : Found Event ID 21410, regarding issue with asynchronous responses for Command Notification Channel. Consider increasing the registry key (HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Modules\Global\Command Executer\AsyncProcessLimit or HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Modules\Global\AsyncProcessLimit) between 5 (default) and 100 (max).`n    Current Async responses possible: '$AsyncMatch'`n      https://kevinholman.com/2021/08/25/what-account-will-command-channel-notifications-run-as-in-scom/"
+				$bestpractice += "$env:COMPUTERNAME : Found Event ID 21410, regarding issue with asynchronous responses for Command Notification Channel. Consider increasing the registry key (HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Modules\Global\Command Executer\AsyncProcessLimit or HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Modules\Global\AsyncProcessLimit) between 5 (default) and 100 (max).`n    Current Async responses possible: '$AsyncMatch'`n      https://kevinholman.com/2021/08/25/what-account-will-command-channel-notifications-run-as-in-scom/"
+				Write-Verbose "$(Invoke-TimeStamp)$env:COMPUTERNAME : Found Event ID 21410, regarding issue with asynchronous responses for Command Notification Channel. Consider increasing the registry key (HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Modules\Global\Command Executer\AsyncProcessLimit or HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Modules\Global\AsyncProcessLimit) between 5 (default) and 100 (max).`n    Current Async responses possible: '$AsyncMatch'`n      https://kevinholman.com/2021/08/25/what-account-will-command-channel-notifications-run-as-in-scom/"
 				Write-Host '-' -NoNewline -ForegroundColor Green
 			}
 			
 			# Check if Management Server has MMA Configured to report to an Management Group
-			Write-Verbose "$(Time-Stamp)Check if Management Server has MMA Configured to report to an Management Group"
+			Write-Verbose "$(Invoke-TimeStamp)Check if Management Server has MMA Configured to report to an Management Group"
 			$ServerMG = Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Server Management Groups\*' -Name IsServer | Select-Object IsServer -ExpandProperty IsServer
 			if ($ServerMG)
 			{
 				$AgentMG = Get-Item -Path 'HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Agent Management Groups\*' -ErrorAction SilentlyContinue
 				if ($AgentMG)
 				{
-					Write-Verbose "$(Time-Stamp)$env:COMPUTERNAME : Found Microsoft Monitoring Agent has Management Groups Configured on a Management Server:`n   Remove all Management Groups under Microsoft Monitoring Agent in Control Panel."
-					$script:bestpractice += "$env:COMPUTERNAME : Found Microsoft Monitoring Agent has Management Groups Configured on a Management Server:`n   Remove all Management Groups under Microsoft Monitoring Agent in Control Panel."
-					Write-Host "-" -NoNewline -ForegroundColor Green
+					Write-Verbose "$(Invoke-TimeStamp)$env:COMPUTERNAME : Found Microsoft Monitoring Agent has Management Groups Configured on a Management Server:`n   Remove all Management Groups under Microsoft Monitoring Agent in Control Panel."
+					$bestpractice += "$env:COMPUTERNAME : Found Microsoft Monitoring Agent has Management Groups Configured on a Management Server:`n   Remove all Management Groups under Microsoft Monitoring Agent in Control Panel."
+					Write-Console "-" -NoNewline -ForegroundColor Green
 				}
 			}
 			Write-Host '-' -NoNewline -ForegroundColor Green
@@ -101,9 +131,9 @@ Detected Issues / Best Practices for SCOM
 			{
 				try
 				{
-					Write-Verbose "$(Time-Stamp)Check DW Writer Login from Database against RunAs Profile 'Data Warehouse Account'"
+					Write-Verbose "$(Invoke-TimeStamp)Check DW Writer Login from Database against RunAs Profile 'Data Warehouse Account'"
 					$writerLoginName = (Import-Csv -ErrorAction SilentlyContinue -Path $OutputPath\DW_WriterLoginName.csv).WriterLoginName
-					$DWAction = (Import-Csv -Path $OutputPath\RunAsProfiles.csv -ErrorAction SilentlyContinue | Where { $_.ProfileName -eq 'Microsoft.SystemCenter.DataWarehouse.ActionAccount' }) | Select-Object Domain, UserName, AccountName, TypeName -Unique
+					$DWAction = (Import-Csv -Path $OutputPath\RunAsProfiles.csv -ErrorAction SilentlyContinue | Where-Object { $_.ProfileName -eq 'Microsoft.SystemCenter.DataWarehouse.ActionAccount' }) | Select-Object Domain, UserName, AccountName, TypeName -Unique
 					$DWWriterAccount = @()
 					if ($DWAction)
 					{
@@ -113,12 +143,12 @@ Detected Issues / Best Practices for SCOM
 							{
 								if (($($actionAccount.TypeName) -eq 'Microsoft.SystemCenter.CollectionManagementServer') -or ($($actionAccount.TypeName) -eq 'Microsoft.SystemCenter.DataWarehouse.DataSet') -or ($($actionAccount.TypeName) -eq 'Microsoft.SystemCenter.Apm.DataTransferService') -or ($($actionAccount.TypeName) -eq 'Microsoft.SystemCenter.DataWarehouseSynchronizationService'))
 								{
-									Write-Verbose "$(Time-Stamp)$($actionAccount.Domain)\$($actionAccount.UserName) : `"$($actionAccount.AccountName)`" - KEEP"
+									Write-Verbose "$(Invoke-TimeStamp)$($actionAccount.Domain)\$($actionAccount.UserName) : `"$($actionAccount.AccountName)`" - KEEP"
 									$DWWriterAccount += "$($actionAccount.Domain)\$($actionAccount.UserName) : `"$($actionAccount.AccountName)`" - KEEP"
 								}
 								else
 								{
-									Write-Verbose "$(Time-Stamp)$($actionAccount.Domain)\$($actionAccount.UserName) : `"$($actionAccount.AccountName)`" - REMOVE"
+									Write-Verbose "$(Invoke-TimeStamp)$($actionAccount.Domain)\$($actionAccount.UserName) : `"$($actionAccount.AccountName)`" - REMOVE"
 									$DWWriterAccount += "$($actionAccount.Domain)\$($actionAccount.UserName) : `"$($actionAccount.AccountName)`" - REMOVE"
 								}
 								if ($actionAccount.TypeName -eq 'Microsoft.SystemCenter.CollectionManagementServer')
@@ -145,13 +175,13 @@ Detected Issues / Best Practices for SCOM
 							}
 							if ($j -lt '3' -or $j -gt '4')
 							{
-								Write-Verbose "$(Time-Stamp)$env:COMPUTERNAME : Missing one of the core class types that are required for the Data Warehouse Action Account profile, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
-								$script:bestpractice += "$env:COMPUTERNAME : Missing one of the core class types that are required for the Data Warehouse Action Account profile, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
+								Write-Verbose "$(Invoke-TimeStamp)$env:COMPUTERNAME : Missing one of the core class types that are required for the Data Warehouse Action Account profile, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
+								$bestpractice += "$env:COMPUTERNAME : Missing one of the core class types that are required for the Data Warehouse Action Account profile, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
 							}
 							$DWWriterAccount = $DWWriterAccount | Select-Object -Unique
-							$script:bestpractice += "$env:COMPUTERNAME : Found an issue with the Data Warehouse Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    SQL Query DW_WriterLoginName:          $writerLoginName`n    Current Data Warehouse Action Account: $($DWWriterAccount -join "`n                                           ")"
-							Write-Verbose "$(Time-Stamp)$env:COMPUTERNAME : Found an issue with the Data Warehouse Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    SQL Query DW_WriterLoginName:          $writerLoginName`n    Current Data Warehouse Action Account: $($DWWriterAccount -join "`n                                           ")"
-							Write-Host "-" -NoNewline -ForegroundColor Green
+							$bestpractice += "$env:COMPUTERNAME : Found an issue with the Data Warehouse Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    SQL Query DW_WriterLoginName:          $writerLoginName`n    Current Data Warehouse Action Account: $($DWWriterAccount -join "`n                                           ")"
+							Write-Verbose "$(Invoke-TimeStamp)$env:COMPUTERNAME : Found an issue with the Data Warehouse Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    SQL Query DW_WriterLoginName:          $writerLoginName`n    Current Data Warehouse Action Account: $($DWWriterAccount -join "`n                                           ")"
+							Write-Console "-" -NoNewline -ForegroundColor Green
 						}
 						else
 						{
@@ -159,9 +189,9 @@ Detected Issues / Best Practices for SCOM
 							if ($DWWriter -ne $writerLoginName)
 							{
 								$MGID = (Import-Csv -Path $OutputPath\MG_Info.csv).ManagementGroupId
-								$script:bestpractice += "$env:COMPUTERNAME : Found mismatch with the Data Warehouse Action Account, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n    SQL Query DW_WriterLoginName:          $writerLoginName`n    Data Warehouse Action Account:   $DWWriter`n`n    Query to update the Data Warehouse DB: UPDATE dbo.ManagementGroup SET WriterLoginName='$DWWriter' WHERE ManagementGroupGuid='$MGID'"
-								Write-Verbose "$(Time-Stamp)Found mismatch with the Data Warehouse Action Account"
-								Write-Host "-" -NoNewline -ForegroundColor Green
+								$bestpractice += "$env:COMPUTERNAME : Found mismatch with the Data Warehouse Action Account, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n    SQL Query DW_WriterLoginName:          $writerLoginName`n    Data Warehouse Action Account:   $DWWriter`n`n    Query to update the Data Warehouse DB: UPDATE dbo.ManagementGroup SET WriterLoginName='$DWWriter' WHERE ManagementGroupGuid='$MGID'"
+								Write-Verbose "$(Invoke-TimeStamp)Found mismatch with the Data Warehouse Action Account"
+								Write-Console "-" -NoNewline -ForegroundColor Green
 							}
 							
 							$j = 0
@@ -194,8 +224,8 @@ Detected Issues / Best Practices for SCOM
 							}
 							if ($j -lt '3' -or $j -gt '4')
 							{
-								Write-Verbose "$(Time-Stamp)$env:COMPUTERNAME : Found an issue with the Data Warehouse Action Account, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
-								$script:bestpractice += "$env:COMPUTERNAME : Found an issue with the Data Warehouse Action Account, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
+								Write-Verbose "$(Invoke-TimeStamp)$env:COMPUTERNAME : Found an issue with the Data Warehouse Action Account, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
+								$bestpractice += "$env:COMPUTERNAME : Found an issue with the Data Warehouse Action Account, you should verify the RunAs Profile 'Data Warehouse Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
 							}
 						}
 					}
@@ -209,16 +239,16 @@ Detected Issues / Best Practices for SCOM
 					$msg = $e.Message
 					
 					Write-Verbose "Caught Exception: $($error[0]) at line: $line"
-					"$(Time-Stamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
+					"$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
 				}
 				Write-Host '-' -NoNewline -ForegroundColor Green
-				Write-Verbose "$(Time-Stamp)Local output path resolved, this is a local machine."
+				Write-Verbose "$(Invoke-TimeStamp)Local output path resolved, this is a local machine."
 				# Check RunAs Profile 'Data Warehouse Report Deployment Account'
 				try
 				{
-					Write-Verbose "$(Time-Stamp)Check RunAs Profile 'Data Warehouse Report Deployment Account'"
+					Write-Verbose "$(Invoke-TimeStamp)Check RunAs Profile 'Data Warehouse Report Deployment Account'"
 					$rptDeploymentAccount = @()
-					$DWReportDeployment = (Import-Csv -Path $OutputPath\RunAsProfiles.csv | Where { $_.ProfileName -eq 'Microsoft.SystemCenter.DataWarehouse.ReportDeploymentActionAccount' }) | Select-Object Domain, UserName, AccountName, TypeName -Unique
+					$DWReportDeployment = (Import-Csv -Path $OutputPath\RunAsProfiles.csv | Where-Object { $_.ProfileName -eq 'Microsoft.SystemCenter.DataWarehouse.ReportDeploymentActionAccount' }) | Select-Object Domain, UserName, AccountName, TypeName -Unique
 					if ($DWReportDeployment)
 					{
 						if (($DWReportDeployment | Select-Object -ExpandProperty UserName -Unique).Count -ne 1 -or ($DWReportDeployment.Count -ne 2))
@@ -236,9 +266,9 @@ Detected Issues / Best Practices for SCOM
 								
 							}
 							$rptDeploymentAccount = $rptDeploymentAccount | Select-Object -Unique
-							$script:bestpractice += "$env:COMPUTERNAME : Found an issue with the Data Warehouse Report Deployment Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Report Deployment Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
-							Write-Verbose "$(Time-Stamp)Found an issue with the Data Warehouse Report Deployment Action Account RunAs Profile"
-							Write-Host "-" -NoNewline -ForegroundColor Green
+							$bestpractice += "$env:COMPUTERNAME : Found an issue with the Data Warehouse Report Deployment Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Report Deployment Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
+							Write-Verbose "$(Invoke-TimeStamp)Found an issue with the Data Warehouse Report Deployment Action Account RunAs Profile"
+							Write-Console "-" -NoNewline -ForegroundColor Green
 						}
 						else
 						{
@@ -262,8 +292,8 @@ Detected Issues / Best Practices for SCOM
 							}
 							if ($z -ne 2)
 							{
-								Write-Verbose "$(Time-Stamp)$env:COMPUTERNAME : Found an issue with the Data Warehouse Report Deployment Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Report Deployment Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
-								$script:bestpractice += "$env:COMPUTERNAME : Found an issue with the Data Warehouse Report Deployment Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Report Deployment Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
+								Write-Verbose "$(Invoke-TimeStamp)$env:COMPUTERNAME : Found an issue with the Data Warehouse Report Deployment Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Report Deployment Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
+								$bestpractice += "$env:COMPUTERNAME : Found an issue with the Data Warehouse Report Deployment Action Account RunAs Profile, you should verify the RunAs Profile 'Data Warehouse Report Deployment Account' is set to the intended accounts:`n`n    Check this blog post: https://blakedrumm.com/blog/data-reader-account-provided-is-not-same-as-that-in-the-management-group/"
 							}
 							
 						}
@@ -278,7 +308,7 @@ Detected Issues / Best Practices for SCOM
 					$msg = $e.Message
 					
 					Write-Verbose "Caught Exception: $($error[0]) at line: $line"
-					"$(Time-Stamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
+					"$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
 				}
 				#=============================================================
 				# Check SQL Configuration for Best Practices
@@ -288,65 +318,147 @@ Detected Issues / Best Practices for SCOM
 					#=============================================================
 					# Operations Manager DB
 					#=============================================================
-					Write-Verbose "$(Time-Stamp)Checking SCOM SQL Configuration for Best Practices"
-					Write-Verbose "$(Time-Stamp)Importing CSV: $(Resolve-Path -Path "$OutputPath\SQL_Properties_OpsDB.csv")"
-					
-					$SQLPropertiesOpsDB = Import-Csv "$OutputPath\SQL_Properties_OpsDB.csv" -ErrorAction SilentlyContinue
-					if ($SQLPropertiesOpsDB)
+					Write-Verbose "$(Invoke-TimeStamp)Checking SCOM SQL Configuration for Best Practices"
+					try
 					{
-						Write-Verbose "$(Time-Stamp)Is the correct edition of SQL Server being used for the OpsDB: $($SQLPropertiesOpsDB.Edition)"
-						if (($SQLPropertiesOpsDB).Edition -notmatch "Enterprise|Standard")
+						Write-Verbose "$(Invoke-TimeStamp)Importing CSV: $OutputPath\SQL_Properties_OpsDB.csv"
+						
+						$SQLPropertiesOpsDB = Import-Csv "$OutputPath\SQL_Properties_OpsDB.csv" -ErrorAction SilentlyContinue
+						if ($SQLPropertiesOpsDB)
 						{
-							Write-Verbose "$(Time-Stamp)Found an issue with the edition of SQL Server for the Operations Manager Database SQL Instance, Operations Manager only allows Enterprise and Standard edition of SQL Server:`n    You are currently running: $(($OMSQLPropertiesImport).Edition)`n    https://learn.microsoft.com/system-center/scom/plan-sqlserver-design#sql-server-requirements"
-							$script:bestpractice += "Found an issue with the edition of SQL Server for the Operations Manager Database SQL Instance, Operations Manager only allows Enterprise and Standard edition of SQL Server:`n    You are currently running: $(($OMSQLPropertiesImport).Edition)`n    https://learn.microsoft.com/system-center/scom/plan-sqlserver-design#sql-server-requirements"
+							$SQLOpsDB_Instance = $SQLPropertiesOpsDB.ServerName
+							
+							Write-Verbose "$(Invoke-TimeStamp)Is the correct edition of SQL Server being used for the OpsDB: $($SQLPropertiesOpsDB.Edition)"
+							if (($SQLPropertiesOpsDB).Edition)
+							{
+								if (($SQLPropertiesOpsDB).Edition -notmatch "Enterprise|Standard")
+								{
+									Write-Verbose "$(Invoke-TimeStamp)Found an issue with the edition of SQL Server for the Operations Manager Database SQL Instance, Operations Manager only allows Enterprise and Standard edition of SQL Server:`n    You are currently running: $(($SQLPropertiesOpsDB).Edition)`n    https://learn.microsoft.com/system-center/scom/plan-sqlserver-design#sql-server-requirements"
+									$bestpractice += "Found an issue with the edition of SQL Server for the Operations Manager Database SQL Instance, Operations Manager only allows Enterprise and Standard edition of SQL Server:`n    You are currently running: $(($SQLPropertiesOpsDB).Edition)`n    https://learn.microsoft.com/system-center/scom/plan-sqlserver-design#sql-server-requirements"
+								}
+							}
+							else
+							{
+								$bestpractice += "Unable to detect the editon of SQL Server for the Operations Manager Database SQL Instance."
+							}
+							
+							Write-Verbose "$(Invoke-TimeStamp)Is Broker enabled for the OpsDB: $($SQLPropertiesOpsDB.Is_Broker_Enabled)"
+							if ($SQLPropertiesOpsDB.Is_Broker_Enabled)
+							{
+								if ($SQLPropertiesOpsDB.Is_Broker_Enabled -eq 'FALSE')
+								{
+									Write-Verbose "$(Invoke-TimeStamp)SQL Broker is not enabled on the Operations Manager Database. You need to enable it: https://learn.microsoft.com/troubleshoot/system-center/scom/troubleshoot-sql-server-service-broker-issues"
+									$bestpractice += "SQL Broker is not enabled on the Operations Manager Database. You need to enable it: https://learn.microsoft.com/troubleshoot/system-center/scom/troubleshoot-sql-server-service-broker-issues"
+								}
+							}
+							else
+							{
+								$bestpractice += "Unable to detect if Broker is enabled for the Operations Manager Database SQL Instance."
+							}
+							
+							Write-Verbose "$(Invoke-TimeStamp)Is CLR enabled for the OpsDB: $($SQLPropertiesOpsDB.Is_CLR_Enabled)"
+							if ($SQLPropertiesOpsDB.Is_CLR_Enabled)
+							{
+								if ($SQLPropertiesOpsDB.Is_CLR_Enabled -eq 'FALSE')
+								{
+									Write-Verbose "$(Invoke-TimeStamp)SQL CLR is not enabled on the Operations Manager Database. You need to enable it: https://learn.microsoft.com/sql/relational-databases/clr-integration/clr-integration-enabling"
+									$bestpractice += "SQL CLR is not enabled on the Operations Manager Database. You need to enable it: https://learn.microsoft.com/sql/relational-databases/clr-integration/clr-integration-enabling"
+								}
+							}
+							else
+							{
+								$bestpractice += "Unable to detect if CLR is enabled for the Operations Manager Database SQL Instance."
+							}
+							Write-Verbose "$(Invoke-TimeStamp)Is Full Text Installed for the OpsDB: $($SQLPropertiesOpsDB.IsFullTextInstalled)"
+							if ($SQLPropertiesOpsDB.IsFullTextInstalled)
+							{
+								if ($SQLPropertiesOpsDB.IsFullTextInstalled -eq 'FALSE')
+								{
+									Write-Verbose "$(Invoke-TimeStamp)SQL Full Text is not installed on the Operations Manager Database. To fix this you will need to reinstall the SQL Instance and check FullText during setup of SQL Instance."
+									$bestpractice += "SQL Full Text is not installed on the Operations Manager Database. To fix this you will need to reinstall the SQL Instance and check FullText during setup of SQL Instance."
+								}
+							}
+							else
+							{
+								$bestpractice += "Unable to detect if SQL Full Text is installed for the Operations Manager Database SQL Instance."
+							}
+							
+							Write-Verbose "$(Invoke-TimeStamp)Checking if SQL Collation set correctly for OpsDB SQL Instance: $($SQLPropertiesOpsDB.Collation)"\
+							if ($SQLPropertiesOpsDB.Collation)
+							{
+								if ($SQLPropertiesOpsDB.Collation -notmatch "SQL_Latin1_General_CP1_CI_AS|Latin1_General_CI_AS|Latin1_General_100_CI_AS|French_CI_AS|French_100_CI_AS|Cyrillic_General_CI_AS|Chinese_PRC_CI_AS|Chinese_Simplified_Pinyin_100_CI_AS|Chinese_Traditional_Stroke_Count_100_CI_AS|Japanese_CI_ASJapanese_XJIS_100_CI_AS|Traditional_Spanish_CI_AS|Modern_Spanish_100_CI_AS|Latin1_General_CI_AS|Cyrillic_General_100_CI_AS|Korean_100_CI_AS|Czech_100_CI_AS|Hungarian_100_CI_AS|Polish_100_CI_AS|Finnish_Swedish_100_CI_AS")
+								{
+									Write-Verbose "$(Invoke-TimeStamp)SQL Server Collation is not set correctly for the Operations Manager SQL Instance: $($SQLPropertiesOpsDB.Collation)"
+									$bestpractice += "SQL Server Collation is not set correctly for the Operations Manager SQL Instance: $($SQLPropertiesOpsDB.Collation)"
+								}
+							}
+							else
+							{
+								$bestpractice += "Unable to detect if SQL Collation is set correctly for the Operations Manager Database SQL Instance."
+							}
 						}
-						Write-Verbose "$(Time-Stamp)Is Broker enabled for the OpsDB: $($SQLPropertiesOpsDB.Is_Broker_Enabled)"
-						if ($SQLPropertiesOpsDB.Is_Broker_Enabled -eq 'FALSE')
-						{
-							Write-Verbose "$(Time-Stamp)SQL Broker is not enabled on the Operations Manager Database. You need to enable it: https://learn.microsoft.com/troubleshoot/system-center/scom/troubleshoot-sql-server-service-broker-issues"
-							$script:bestpractice += "SQL Broker is not enabled on the Operations Manager Database. You need to enable it: https://learn.microsoft.com/troubleshoot/system-center/scom/troubleshoot-sql-server-service-broker-issues"
-						}
-						Write-Verbose "$(Time-Stamp)Is CLR enabled for the OpsDB: $($SQLPropertiesOpsDB.Is_CLR_Enabled)"
-						if ($SQLPropertiesOpsDB.Is_CLR_Enabled -eq 'FALSE')
-						{
-							Write-Verbose "$(Time-Stamp)SQL CLR is not enabled on the Operations Manager Database. You need to enable it: https://learn.microsoft.com/sql/relational-databases/clr-integration/clr-integration-enabling"
-							$script:bestpractice += "SQL CLR is not enabled on the Operations Manager Database. You need to enable it: https://learn.microsoft.com/sql/relational-databases/clr-integration/clr-integration-enabling"
-						}
-						Write-Verbose "$(Time-Stamp)Is Full Text Installed for the OpsDB: $($SQLPropertiesOpsDB.IsFullTextInstalled)"
-						if ($SQLPropertiesOpsDB.IsFullTextInstalled -eq 'FALSE')
-						{
-							Write-Verbose "$(Time-Stamp)SQL Full Text is not installed on the Operations Manager Database. To fix this you will need to reinstall the SQL Instance and check FullText during setup of SQL Instance."
-							$script:bestpractice += "SQL Full Text is not installed on the Operations Manager Database. To fix this you will need to reinstall the SQL Instance and check FullText during setup of SQL Instance."
-						}
-						Write-Verbose "$(Time-Stamp)Checking if SQL Collation set correctly for OpsDB SQL Instance: $($SQLPropertiesOpsDB.Collation)"
-						if ($SQLPropertiesOpsDB.Collation -notmatch "SQL_Latin1_General_CP1_CI_AS|Latin1_General_CI_AS|Latin1_General_100_CI_AS|French_CI_AS|French_100_CI_AS|Cyrillic_General_CI_AS|Chinese_PRC_CI_AS|Chinese_Simplified_Pinyin_100_CI_AS|Chinese_Traditional_Stroke_Count_100_CI_AS|Japanese_CI_ASJapanese_XJIS_100_CI_AS|Traditional_Spanish_CI_AS|Modern_Spanish_100_CI_AS|Latin1_General_CI_AS|Cyrillic_General_100_CI_AS|Korean_100_CI_AS|Czech_100_CI_AS|Hungarian_100_CI_AS|Polish_100_CI_AS|Finnish_Swedish_100_CI_AS")
-						{
-							Write-Verbose "$(Time-Stamp)SQL Server Collation is not set correctly for the Operations Manager SQL Instance: $($SQLPropertiesOpsDB.Collation)"
-							$script:bestpractice += "SQL Server Collation is not set correctly for the Operations Manager SQL Instance: $($SQLPropertiesOpsDB.Collation)"
-						}
+					}
+					catch
+					{
+						"$(Invoke-TimeStamp)Unable to run Best Practice Analyzer for SCOM SQL Configuration due to Error: $($error[0])`n`n    Line: $line`n    Message:$msg" | Out-File $OutputPath\Error.log -Append
+						#potential error code
+						#use continue or break keywords
+						#$e = $_.Exception
+						$line = $_.InvocationInfo.ScriptLineNumber
+						$msg = $e.Message
+						
+						Write-Verbose "$(Invoke-TimeStamp)Unable to run Best Practice Analyzer for SCOM OpsDB due to Error: $($error[0])`n`n    Line: $line`n    Message:$msg"
 					}
 					#=============================================================
 					# Data Warehouse DB
 					#=============================================================
-					
+					Write-Verbose "$(Invoke-TimeStamp)Importing CSV: $OutputPath\SQL_Properties_DW.csv"
 					$SQLPropertiesDW = Import-Csv "$OutputPath\SQL_Properties_DW.csv" -ErrorAction SilentlyContinue
 					if ($SQLPropertiesDW)
 					{
-						Write-Verbose "$(Time-Stamp)Is the correct edition of SQL Server being used for the Data Warehouse: $($SQLPropertiesDW.Edition)"
-						if (($SQLPropertiesDW).Edition -notmatch "Enterprise|Standard")
+						$SQLDW_Instance = $SQLPropertiesDW.ServerName
+						
+						Write-Verbose "$(Invoke-TimeStamp)Is the correct edition of SQL Server being used for the Data Warehouse: $($SQLPropertiesDW.Edition)"
+						if (($SQLPropertiesDW).Edition)
 						{
-							$script:bestpractice += "Found an issue with the edition of SQL Server for the Operations Manager Data Warehouse Database SQL Instance, Operations Manager only allows Enterprise and Standard edition of SQL Server:`n    You are currently running: $(($SQLPropertiesDW).Edition)`n    https://learn.microsoft.com/system-center/scom/plan-sqlserver-design#sql-server-requirements"
+							if (($SQLPropertiesDW).Edition -notmatch "Enterprise|Standard")
+							{
+								Write-Verbose "$(Invoke-TimeStamp)Found an issue with the edition of SQL Server for the Operations Manager Data Warehouse Database SQL Instance, Operations Manager only allows Enterprise and Standard edition of SQL Server:`n    You are currently running: $(($SQLPropertiesDW).Edition)`n    https://learn.microsoft.com/system-center/scom/plan-sqlserver-design#sql-server-requirements"
+								$bestpractice += "Found an issue with the edition of SQL Server for the Operations Manager Data Warehouse Database SQL Instance, Operations Manager only allows Enterprise and Standard edition of SQL Server:`n    You are currently running: $(($SQLPropertiesDW).Edition)`n    https://learn.microsoft.com/system-center/scom/plan-sqlserver-design#sql-server-requirements"
+							}
 						}
-						Write-Verbose "$(Time-Stamp)Is Full Text Installed for the Data Warehouse: $($SQLPropertiesDW.IsFullTextInstalled)"
-						if ($SQLPropertiesDW.IsFullTextInstalled -eq 'FALSE')
+						else
 						{
-							$script:bestpractice += "SQL Full Text is not installed on the Data Warehouse Database. To fix this you will need to reinstall the SQL Instance and check FullText during setup of SQL Instance."
+							$bestpractice += "Unable to detect the editon of SQL Server for the Operations Manager Data Warehouse Database SQL Instance."
 						}
-						Write-Verbose "$(Time-Stamp)Checking if SQL Collation set correctly for Data Warehouse SQL Instance: $($SQLPropertiesDW.Collation)"
-						if ($SQLPropertiesDW.Collation -notmatch "SQL_Latin1_General_CP1_CI_AS|Latin1_General_CI_AS|Latin1_General_100_CI_AS|French_CI_AS|French_100_CI_AS|Cyrillic_General_CI_AS|Chinese_PRC_CI_AS|Chinese_Simplified_Pinyin_100_CI_AS|Chinese_Traditional_Stroke_Count_100_CI_AS|Japanese_CI_ASJapanese_XJIS_100_CI_AS|Traditional_Spanish_CI_AS|Modern_Spanish_100_CI_AS|Latin1_General_CI_AS|Cyrillic_General_100_CI_AS|Korean_100_CI_AS|Czech_100_CI_AS|Hungarian_100_CI_AS|Polish_100_CI_AS|Finnish_Swedish_100_CI_AS")
+						Write-Verbose "$(Invoke-TimeStamp)Is Full Text Installed for the Data Warehouse: $($SQLPropertiesDW.IsFullTextInstalled)"
+						if ($SQLPropertiesDW.IsFullTextInstalled)
 						{
-							$script:bestpractice += "SQL Server Collation is not set correctly for the Data Warehouse SQL Instance: $($SQLPropertiesDW.Collation)"
+							if ($SQLPropertiesDW.IsFullTextInstalled -eq 'FALSE')
+							{
+								Write-Verbose "SQL Full Text is not installed on the Data Warehouse Database. To fix this you will need to reinstall the SQL Instance and check FullText during setup of SQL Instance."
+								$bestpractice += "SQL Full Text is not installed on the Data Warehouse Database. To fix this you will need to reinstall the SQL Instance and check FullText during setup of SQL Instance."
+							}
 						}
+						else
+						{
+							$bestpractice += "Unable to detect if SQL Full Text is installed for the Operations Manager Data Warehouse Database SQL Instance."
+						}
+						
+						Write-Verbose "$(Invoke-TimeStamp)Checking if SQL Collation set correctly for Data Warehouse SQL Instance: $($SQLPropertiesDW.Collation)"
+						if ($SQLPropertiesDW.Collation)
+						{
+							if ($SQLPropertiesDW.Collation -notmatch "SQL_Latin1_General_CP1_CI_AS|Latin1_General_CI_AS|Latin1_General_100_CI_AS|French_CI_AS|French_100_CI_AS|Cyrillic_General_CI_AS|Chinese_PRC_CI_AS|Chinese_Simplified_Pinyin_100_CI_AS|Chinese_Traditional_Stroke_Count_100_CI_AS|Japanese_CI_ASJapanese_XJIS_100_CI_AS|Traditional_Spanish_CI_AS|Modern_Spanish_100_CI_AS|Latin1_General_CI_AS|Cyrillic_General_100_CI_AS|Korean_100_CI_AS|Czech_100_CI_AS|Hungarian_100_CI_AS|Polish_100_CI_AS|Finnish_Swedish_100_CI_AS")
+							{
+								Write-Verbose "SQL Server Collation is not set correctly for the Data Warehouse SQL Instance: $($SQLPropertiesDW.Collation)"
+								$bestpractice += "SQL Server Collation is not set correctly for the Data Warehouse SQL Instance: $($SQLPropertiesDW.Collation)"
+							}
+						}
+						else
+						{
+							$bestpractice += "Unable to detect if SQL Collation is set correctly for the Operations Manager Data Warehouse Database SQL Instance."
+						}
+						
 					}
 					#=============================================================
 					#=============================================================
@@ -358,17 +470,33 @@ Detected Issues / Best Practices for SCOM
 					#=============================================================
 					# Operations Manager DB
 					#=============================================================
-					Write-Verbose "$(Time-Stamp)Running check for the SCOM DB Sizes"
+					Write-Verbose "$(Invoke-TimeStamp)Running check for the SCOM DB Sizes"
+					Write-Verbose "$(Invoke-TimeStamp)Importing CSV: $OutputPath\SQL_DBSize_OpsDB.csv"
 					$SQLDBSizesOpsDB = Import-Csv "$OutputPath\SQL_DBSize_OpsDB.csv" -ErrorAction SilentlyContinue
 					if ($SQLDBSizesOpsDB)
 					{
 						$OpsDB_MOMData = $SQLDBSizesOpsDB | Where-Object { $_.Name -eq 'MOM_DATA' }
-						if ([int]$(($OpsDB_MOMData.'FreeSpace(%)').Split("%").Trim()[0]) -lt 6)
+						if ($OpsDB_MOMData.'FreeSpace(%)')
 						{
-							Write-Verbose "$(Time-Stamp)Operations Manager Database is nearing full, less than 6% free: $($OpsDB_MOMData.'FreeSpace(%)') free space"
-							$script:bestpractice += "Operations Manager Database is nearing full, less than 6% free: $($OpsDB_MOMData.'FreeSpace(%)') free space"
+							if ([int]$(($OpsDB_MOMData.'FreeSpace(%)').Split("%").Trim()[0]) -lt 6)
+							{
+								Write-Verbose "$(Invoke-TimeStamp)Operations Manager Database is nearing full, less than 6% free: $($OpsDB_MOMData.'FreeSpace(%)') free space"
+								$bestpractice += "Operations Manager Database is nearing full, less than 6% free: $($OpsDB_MOMData.'FreeSpace(%)') free space"
+							}
 						}
-						$OpsDB_DataDiskDrive = ($OpsDB_MOMData.Location).Split(":")[0]
+						else
+						{
+							$bestpractice += "Unable to check the Operations Manager Database Free Space."
+						}
+						
+						if ($OpsDB_MOMData.Location)
+						{
+							$OpsDB_DataDiskDrive = ($OpsDB_MOMData.Location).Split(":")[0]
+						}
+						else
+						{
+							$OpsDB_DataDiskDrive = $null
+						}
 					}
 					else
 					{
@@ -378,15 +506,15 @@ Detected Issues / Best Practices for SCOM
 					#=============================================================
 					# Data Warehouse DB
 					#=============================================================
-					
+					Write-Verbose "$(Invoke-TimeStamp)Importing CSV: $OutputPath\SQL_DBSize_DW.csv"
 					$SQLDBSizesDWDB = Import-Csv "$OutputPath\SQL_DBSize_DW.csv" -ErrorAction SilentlyContinue
 					if ($SQLDBSizesDWDB)
 					{
 						$DWDB_MOMData = $SQLDBSizesDWDB | Where-Object { $_.Name -eq 'MOM_DATA' }
 						if ([int]$(($DWDB_MOMData.'FreeSpace(%)').Split(" %")[0]) -lt 6)
 						{
-							Write-Verbose "$(Time-Stamp)Operations Manager Data Warehouse Database is nearing full, less than 6% free: $($DWDB_MOMData.'FreeSpace(%)') free space"
-							$script:bestpractice += "Operations Manager Data Warehouse Database is nearing full, less than 6% free: $($DWDB_MOMData.'FreeSpace(%)') free space"
+							Write-Verbose "$(Invoke-TimeStamp)Operations Manager Data Warehouse Database is nearing full, less than 6% free: $($DWDB_MOMData.'FreeSpace(%)') free space"
+							$bestpractice += "Operations Manager Data Warehouse Database is nearing full, less than 6% free: $($DWDB_MOMData.'FreeSpace(%)') free space"
 						}
 						$DWDB_DataDiskDrive = ($DWDB_MOMData.Location).Split(":")[0]
 					}
@@ -399,6 +527,7 @@ Detected Issues / Best Practices for SCOM
 					# tempdb DB
 					#=============================================================
 					[int]$freespace_percent = $null
+					Write-Verbose "$(Invoke-TimeStamp)Importing CSV: $OutputPath\SQL_DBSize_OpsDB_TempDB.csv"
 					$SQLOpsDB_tempdb = Import-Csv "$OutputPath\SQL_DBSize_OpsDB_TempDB.csv" -ErrorAction SilentlyContinue
 					if ($SQLOpsDB_tempdb)
 					{
@@ -410,14 +539,13 @@ Detected Issues / Best Practices for SCOM
 								$freespace_percent += [int]$OpsDBTempData;
 								$resultNumber = [int]$freespace_percent + [int]$OpsDBTempData
 							}
-							
 							if ($resultNumber -lt 10)
 							{
-								Write-Verbose "$(Time-Stamp)Operations Manager tempdb Database is nearing full, less than 10% free overall: $resultNumber`% free space"
-								$script:bestpractice += "Operations Manager tempdb Database is nearing full, less than 10% free overall: $resultNumber`% free space"
+								Write-Verbose "$(Invoke-TimeStamp)Operations Manager tempdb Database is nearing full, less than 10% free overall: $resultNumber`% free space"
+								$bestpractice += "Operations Manager tempdb Database is nearing full, less than 10% free overall: $resultNumber`% free space"
 							}
 						}
-						$driveLetters = @()
+						$OpsDB_tempdb_driveLetters = @()
 						foreach ($OpsDBtempdbDrive in $SQLOpsDB_tempdb.Location)
 						{
 							$OpsDB_tempdb_driveLetters += "$($OpsDBtempdbDrive.Split(":") | Select-Object -First 1)`:\ "
@@ -436,25 +564,36 @@ Detected Issues / Best Practices for SCOM
 								$freespace_percent += [int]$DWtempdata;
 								$resultNumber = [int]$freespace_percent + [int]$DWtempdata
 							}
-							
 							if ($resultNumber -lt 10)
 							{
-								Write-Verbose "$(Time-Stamp)Operations Manager Data Warehouse tempdb Database is nearing full, less than 10% free overall: $($DW_tempData.'FreeSpace(%)') free space"
-								$script:bestpractice += "Operations Manager Data Warehouse tempdb Database is nearing full, less than 10% free overall: $($DW_tempData.'FreeSpace(%)') free space"
+								Write-Verbose "$(Invoke-TimeStamp)Operations Manager Data Warehouse tempdb Database is nearing full, less than 10% free overall: $resultNumber`% free space"
+								$bestpractice += "Operations Manager Data Warehouse tempdb Database is nearing full, less than 10% free overall: $resultNumber`% free space"
 							}
 						}
-						$driveLetters = @()
-						foreach ($DWDBtempdbDrive in $SQLOpsDB_tempdb.Location)
+						$DW_tempdb_driveLetters = @()
+						foreach ($DWDBtempdbDrive in $SQLDW_tempdb.Location)
 						{
 							$DW_tempdb_driveLetters += "$($DWDBtempdbDrive.Split(":") | Select-Object -First 1)`:\ "
 						}
 						$DW_tempdb_driveLetters = $DW_tempdb_driveLetters.Split(" ") | Select-Object -Unique
-						if ($OpsDB_DataDiskDrive -eq $DWDB_DataDiskDrive -or
-							$OpsDB_DataDiskDrive -match $OpsDB_tempdb_driveLetters -or
-							$DWDB_DataDiskDrive -match $DW_tempdb_driveLetters)
+						
+						if ($SQLDW_Instance -ne $SQLOpsDB_Instance -and
+							($OpsDB_DataDiskDrive -eq $DWDB_DataDiskDrive -or
+								$OpsDB_DataDiskDrive -match $OpsDB_tempdb_driveLetters -or
+								$DWDB_DataDiskDrive -match $DW_tempdb_driveLetters))
 						{
-							Write-Verbose "$(Time-Stamp)Operations Manager Database file (MOM_DATA) is sharing the same drive as the Data Warehouse ($OpsDB_DataDiskDrive`:\) or tempdb. It is recommended to seperate these to their own respective drives due to I/O constraints and other issues that arise.`n    Operations Manager Database File Location: $($OpsDB_MOMData.Location)`n    Data Warehouse Database File Location: $($DWDB_MOMData.Location)`n    Operations Manager tempdb Database File Location: $OpsDB_tempdb_driveLetters `n    Data Warehouse tempdb Database File Location: $DW_tempdb_driveLetters"
-							$script:bestpractice += "Operations Manager Database file (MOM_DATA) is sharing the same drive as the Data Warehouse ($OpsDB_DataDiskDrive`:\) or tempdb. It is recommended to seperate these to their own respective drives due to I/O constraints and other issues that arise.`n    Operations Manager Database File Location: $($OpsDB_MOMData.Location)`n    Data Warehouse Database File Location: $($DWDB_MOMData.Location)`n    Operations Manager tempdb Database File Location: $OpsDB_tempdb_driveLetters `n    Data Warehouse tempdb Database File Location: $DW_tempdb_driveLetters"
+							Write-Verbose "$(Invoke-TimeStamp)Operations Manager Database files (MOM_DATA) are sharing the same drive as the Data Warehouse or tempdb. It is recommended to seperate these to their own respective drives due to I/O constraints and other issues that arise.`n    Operations Manager Database File Location: $($OpsDB_MOMData.Location)`n    Data Warehouse Database File Location: $($DWDB_MOMData.Location)`n    Operations Manager tempdb Database File Location: $OpsDB_tempdb_driveLetters `n    Data Warehouse tempdb Database File Location: $DW_tempdb_driveLetters"
+							$bestpractice += "Operations Manager Database files (MOM_DATA) are sharing the same drive as the Data Warehouse or tempdb. It is recommended to seperate these to their own respective drives due to I/O constraints and other issues that arise.`n    Operations Manager Database File Location: $($OpsDB_MOMData.Location)`n    Data Warehouse Database File Location: $($DWDB_MOMData.Location)`n    Operations Manager tempdb Database File Location: $OpsDB_tempdb_driveLetters `n    Data Warehouse tempdb Database File Location: $DW_tempdb_driveLetters"
+						}
+						if ($OpsDB_DataDiskDrive -match $OpsDB_tempdb_driveLetters)
+						{
+							Write-Verbose "$(Invoke-TimeStamp)Operations Manager Database file (MOM_DATA) is sharing the same drive as the tempdb. It is recommended to seperate these to their own respective drives due to I/O constraints and other issues that arise.`n    Operations Manager Database File Location: $($OpsDB_MOMData.Location)`n    Operations Manager tempdb Database File Location: $OpsDB_tempdb_driveLetters"
+							$bestpractice += "Operations Manager Database file (MOM_DATA) is sharing the same drive as the tempdb. It is recommended to seperate these to their own respective drives due to I/O constraints and other issues that arise.`n    Operations Manager Database File Location: $($OpsDB_MOMData.Location)`n    Operations Manager tempdb Database File Location: $OpsDB_tempdb_driveLetters"
+						}
+						if ($DWDB_DataDiskDrive -match $DW_tempdb_driveLetters)
+						{
+							Write-Verbose "$(Invoke-TimeStamp)Operations Manager Data Warehouse Database file (MOM_DATA) is sharing the same drive as the tempdb. It is recommended to seperate these to their own respective drives due to I/O constraints and other issues that arise.`n    Data Warehouse Database File Location: $($DWDB_MOMData.Location)`n    Data Warehouse tempdb Database File Location: $DW_tempdb_driveLetters"
+							$bestpractice += "Operations Manager Database Data Warehouse file (MOM_DATA) is sharing the same drive as the tempdb. It is recommended to seperate these to their own respective drives due to I/O constraints and other issues that arise.`n    Data Warehouse Database File Location: $($DWDB_MOMData.Location)`n    Data Warehouse tempdb Database File Location: $DW_tempdb_driveLetters"
 						}
 					}
 					
@@ -466,14 +605,14 @@ Detected Issues / Best Practices for SCOM
 				}
 				catch
 				{
-					"$(Time-Stamp)Unable to run Best Practice Analyzer for SCOM SQL Configuration due to Error: $($error[0])`n`n    Line: $line`n    Message:$msg" | Out-File $OutputPath\Error.log -Append
+					"$(Invoke-TimeStamp)Unable to run Best Practice Analyzer for SCOM SQL Configuration due to Error: $($error[0])`n`n    Line: $line`n    Message:$msg" | Out-File $OutputPath\Error.log -Append
 					#potential error code
 					#use continue or break keywords
 					#$e = $_.Exception
 					$line = $_.InvocationInfo.ScriptLineNumber
 					$msg = $e.Message
 					
-					Write-Verbose "$(Time-Stamp)Unable to run Best Practice Analyzer for SCOM SQL Configuration due to Error: $($error[0])`n`n    Line: $line`n    Message:$msg"
+					Write-Verbose "$(Invoke-TimeStamp)Unable to run Best Practice Analyzer for SCOM SQL Configuration due to Error: $($error[0])`n`n    Line: $line`n    Message:$msg"
 				}
 				
 				
@@ -490,29 +629,36 @@ Detected Issues / Best Practices for SCOM
 						Write-Verbose "Starting SPN Checker"
 						Write-Verbose "Importing CSV: $(Resolve-Path -Path "$OutputPath\SPN-Output.csv" -ErrorAction Stop)"
 						$SPNdata = Import-Csv "$OutputPath\SPN-Output.csv" -ErrorAction Stop
-						try
+						if (-NOT ($ManagementServers))
 						{
-							$ManagementServers = Import-Csv "$OutputPath\ManagementServers.csv" -ErrorAction Stop
-						}
-						catch
-						{
-							if (!$ManagementServers)
+							try
 							{
-								$ManagementServers = Get-SCOMManagementServer
+								$ManagementServers = Import-Csv "$OutputPath\ManagementServers.csv" -ErrorAction Stop
 							}
+							catch
+							{
+								if (!$ManagementServers)
+								{
+									$ManagementServers = Get-SCOMManagementServer
+								}
+							}
+							[array]$MSlist = $ManagementServers | Select-Object -Property DisplayName -ExpandProperty DisplayName -Unique
 						}
-						[array]$MSlist = $ManagementServers | Select-Object -Property DisplayName -ExpandProperty DisplayName -Unique
+						else
+						{
+							[array]$MSlist = $ManagementServers
+						}
 						
 						ForEach ($ManagementServer in $MSlist)
 						{
 							Write-Verbose "SPN Best Practices for: $ManagementServer"
 							$MS = (($ManagementServer | Out-String).Split("."))[0]
 							#$SPNdata | Where { ($_.ServiceClass -eq 'MSOMHSvc') -and ($_.ComputerName -eq "$MS") }
-							$MSOMSDKSvc = $SPNdata | Where { ($_.ServiceClass -eq 'MSOMSdkSvc') -and ($_.SPN -eq "MSOMSdkSvc/$MS") -or ($_.SPN -eq "MSOMSdkSvc/$ManagementServer") }
+							$MSOMSDKSvc = $SPNdata | Where-Object { ($_.ServiceClass -eq 'MSOMSdkSvc') -and ($_.SPN -eq "MSOMSdkSvc/$MS") -or ($_.SPN -eq "MSOMSdkSvc/$ManagementServer") }
 							
 							$OSServicesData = (Get-CimInstance Win32_service -ComputerName $ManagementServer).where{ $_.name -eq 'omsdk' -or $_.name -eq 'cshost' -or $_.name -eq 'HealthService' }
 							$OSServices = @()
-							$OSServicesData | % {
+							$OSServicesData | ForEach-Object {
 								$OSServices += [PSCustomObject]@{
 									ComputerName	   = $MS
 									ServiceDisplayName = $_.DisplayName
@@ -548,7 +694,7 @@ Detected Issues / Best Practices for SCOM
 														if ($SDKSvcName.SAMAccountName -ne "$fullAccountName")
 														{
 															Write-Verbose "   - SPN does not match to $fullAccountName"
-															$script:bestpractice += "$ManagementServer : SPNs are set incorrectly for MSOMSdkSvc (Service Running as Computer Account), the following commands will resolve your SPN issues:`n    setspn -D $($SDKSvcName.SPN) $($SDKSvcName.SAMAccountName)`n    setspn -S $($SDKSvcName.SPN) $fullAccountName`n"
+															$bestpractice += "$ManagementServer : SPNs are set incorrectly for MSOMSdkSvc (Service Running as Computer Account), the following commands will resolve your SPN issues:`n    setspn -D $($SDKSvcName.SPN) $($SDKSvcName.SAMAccountName)`n    setspn -S $($SDKSvcName.SPN) $fullAccountName`n"
 														}
 														else
 														{
@@ -565,7 +711,7 @@ Detected Issues / Best Practices for SCOM
 														if ($SDKSvcName.SAMAccountName -ne $fullAccountName)
 														{
 															Write-Verbose "   - SPN does not match to $fullAccountName"
-															$script:bestpractice += "$ManagementServer : SPNs are set incorrectly for MSOMSdkSvc (Service Running as User Account), the following commands will resolve your SPN issues:`n    setspn -D $($SDKSvcName.SPN) $($SDKSvcName.SAMAccountName)`n    setspn -S $($SDKSvcName.SPN) $($Service.AccountName)`n"
+															$bestpractice += "$ManagementServer : SPNs are set incorrectly for MSOMSdkSvc (Service Running as User Account), the following commands will resolve your SPN issues:`n    setspn -D $($SDKSvcName.SPN) $($SDKSvcName.SAMAccountName)`n    setspn -S $($SDKSvcName.SPN) $($Service.AccountName)`n"
 														}
 														else
 														{
@@ -586,7 +732,7 @@ Detected Issues / Best Practices for SCOM
 								}
 								else
 								{
-									Write-Verbose "$(Time-Stamp)  Unable to gather OSServices data for checking the account SCOM is running as."
+									Write-Verbose "$(Invoke-TimeStamp)  Unable to gather OSServices data for checking the account SCOM is running as."
 								<#
 								$SDKDomain = '<your domain>'
 								$SDKAccount = '<scom sdk domain account>'
@@ -615,7 +761,7 @@ Detected Issues / Best Practices for SCOM
 					}
 					#>
 					
-					Write-Verbose "$(Time-Stamp)Running SPN best practice analyzer"
+					Write-Verbose "$(Invoke-TimeStamp)Running SPN best practice analyzer"
 					Get-SPNBestPractice
 					
 					#=============================================================
@@ -630,7 +776,7 @@ Detected Issues / Best Practices for SCOM
 				}
 				catch
 				{
-					"$(Time-Stamp)Unable to run Best Practice Analyzer for SPN data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
+					"$(Invoke-TimeStamp)Unable to run Best Practice Analyzer for SPN data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
 					Write-Verbose $_
 				}
 				# #=============================================================
@@ -651,14 +797,14 @@ Detected Issues / Best Practices for SCOM
 						{
 							$obj = New-Object System.Object
 							$obj | Add-Member -MemberType NoteProperty -Name DynamicGroupName -Value $Group.DisplayName
-							$obj | Add-Member -MemberType NoteProperty -Name DiscoveryName -Value ($Group.GetMonitoringDiscoveries() | % { $_ | Select -ExpandProperty DisplayName })
-							$obj | Add-Member -MemberType NoteProperty -Name DiscoveryID -Value ($Group.GetMonitoringDiscoveries() | Select -ExpandProperty ID)
-							$obj | Add-Member -MemberType NoteProperty -Name OuterXML -Value ($Group.GetMonitoringDiscoveries().CreateNavigator() | Select -ExpandProperty OuterXml)
-							$obj | Add-Member -MemberType NoteProperty -Name Typedvalue -Value ($Group.GetMonitoringDiscoveries().CreateNavigator() | Select -ExpandProperty TypedValue)
-							$obj | Add-Member -MemberType NoteProperty -Name DynamicExpressionCount -Value (($obj.OuterXML | %{ $_ | Select-Xml -XPath "//Expression" }).Count)
+							$obj | Add-Member -MemberType NoteProperty -Name DiscoveryName -Value ($Group.GetMonitoringDiscoveries() | ForEach-Object { $_ | Select-Object -ExpandProperty DisplayName })
+							$obj | Add-Member -MemberType NoteProperty -Name DiscoveryID -Value ($Group.GetMonitoringDiscoveries() | Select-Object -ExpandProperty ID)
+							$obj | Add-Member -MemberType NoteProperty -Name OuterXML -Value ($Group.GetMonitoringDiscoveries().CreateNavigator() | Select-Object -ExpandProperty OuterXml)
+							$obj | Add-Member -MemberType NoteProperty -Name Typedvalue -Value ($Group.GetMonitoringDiscoveries().CreateNavigator() | Select-Object -ExpandProperty TypedValue)
+							$obj | Add-Member -MemberType NoteProperty -Name DynamicExpressionCount -Value (($obj.OuterXML | ForEach-Object{ $_ | Select-Xml -XPath "//Expression" }).Count)
 							$obj | Add-Member -MemberType NoteProperty -Name MemberCount -Value $($Group | Get-SCOMClassInstance).Count
-							Write-Debug "         - Object: `n$($obj | Select *)"
-							$groupOut += $obj | Where { $_.OuterXML -match "<Expression>" }
+							Write-Debug "         - Object: `n$($obj | Select-Object *)"
+							$groupOut += $obj | Where-Object { $_.OuterXML -match "<Expression>" }
 							Write-Verbose "              - Dynamic Expression Count: $($obj.DynamicExpressionCount)"
 						}
 					}
@@ -666,12 +812,17 @@ Detected Issues / Best Practices for SCOM
 					if ($groupOut.DynamicExpressionCount -gt 15)
 					{
 						Write-Verbose "           - Tagged Group, too many Dynamic expressions!`n------------------------------------------------------------------"
-						$script:bestpractice += @"
+						$GroupCalcPollingIntervalInMilliseconds = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\System Center\2010\Common\" -ErrorAction SilentlyContinue).GroupCalcPollingIntervalMilliseconds
+						if (-NOT $GroupCalcPollingIntervalInMilliseconds)
+						{
+							$GroupCalcPollingIntervalInMilliseconds = '(not present)'
+						}
+						$bestpractice += @"
 A high number of dynamic groups detected, this may cause some issues with group calculation (https://kevinholman.com/2017/03/08/recommended-registry-tweaks-for-scom-2016-management-servers/). Try updating the following registry key:
      Path: HKLM:\SOFTWARE\Microsoft\System Center\2010\Common\
      REG_DWORD Decimal Value:       GroupCalcPollingIntervalMilliseconds = 1800000
 
-     SCOM existing registry value:  (not present)
+     SCOM existing registry value:  $GroupCalcPollingIntervalInMilliseconds
      SCOM default code value:  30000 (30 seconds)
 
      Description:  This setting will slow down how often group calculation runs to find changes in group memberships. Group calculation can be very expensive, especially with a large number of groups, large agent count, or complex group membership expressions.
@@ -680,14 +831,13 @@ A high number of dynamic groups detected, this may cause some issues with group 
 
 
      Overall Dynamic Membership Group Count: $($groupOut.Count)
-
-     $($groupOut | Select DynamicGroupName, DiscoveryName, DynamicExpressionCount, MemberCount | Sort-Object DynamicExpressionCount, MemberCount -Descending | Out-String -Width 4096)
 "@
+						$($groupOut | Select-Object DynamicGroupName, DiscoveryName, DynamicExpressionCount, MemberCount | Sort-Object DynamicExpressionCount, MemberCount -Descending | Out-String -Width 4096) | Out-File $OutputPath\GroupMembershipCount.txt
 					}
 				}
 				catch
 				{
-					"$(Time-Stamp)Unable to run Best Practice Analyzer for SCOM Group Checker due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
+					"$(Invoke-TimeStamp)Unable to run Best Practice Analyzer for SCOM Group Checker due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
 					Write-Verbose $_
 				}
 			}
@@ -698,7 +848,7 @@ A high number of dynamic groups detected, this may cause some issues with group 
 				foreach ($line in $GeneralInfo)
 				{
 					# Check Latency between Management Server(s) and SQL Database(s)
-					$objectSplit = ($line | Where { ($_ -match "-> $global:OpsDB_SQLServer :|-> $global:DW_SQLServer :") }) -split " "
+					$objectSplit = ($line | Where-Object { ($_ -match "-> $OpsDB_SQLServer :|-> $DW_SQLServer :") }) -split " "
 					if ($objectSplit)
 					{
 						$serverName = $objectSplit | Select-Object -Index 0
@@ -706,62 +856,89 @@ A high number of dynamic groups detected, this may cause some issues with group 
 						$responseTime = $objectSplit | Select-Object -Last 2
 						if ([int]$($responseTime.Split(" ") | Select-Object -First 1) -gt 10)
 						{
-							$script:bestpractice += "Management Server: $serverName has high (greater than 10ms) response time to Database: $dbServerName - ($responseTime)"
+							$bestpractice += "Management Server: $serverName has high (greater than 10ms) response time to Database: $dbServerName - ($responseTime)"
 						}
 					}
 					# Check that time is synchronized
-					$timeSync = ($line | Where { $_ -match "Time NOT synchronized between :" })
+					$timeSync = ($line | Where-Object { $_ -match "Time NOT synchronized between :" })
 					if ($timeSync)
 					{
-						$script:bestpractice += $timeSync
+						$bestpractice += $timeSync
 					}
 					# Verify the ConfigService.config file is the same across all the Management Servers
-					$configCheck = ($line | Where { $_ -match "There are differences between :" }) -split " "
+					$configCheck = ($line | Where-Object { $_ -match "There are differences between :" }) -split " "
 					if ($configCheck)
 					{
 						$originManagementServer = $configCheck | Select-Object -Index 5
 						$destinationManagementServer = $configCheck | Select-Object -Index 7
-						$script:bestpractice += "Configuration differences between $originManagementServer and $destinationManagementServer. (ConfigService.config)"
+						$bestpractice += "Configuration differences between $originManagementServer and $destinationManagementServer. (ConfigService.config)"
 					}
 				}
 			}
-			
-			return $script:bestpractice
+			if ($bestpractice)
+			{
+				return $bestpractice
+			}
+			else
+			{
+				return $null
+			}
 		}
 		$gatheredData = @()
-		# Go through each server passed to the main function: Get-BestPractices
+		# Go through each server passed to the main function: Invoke-GetBestPractices
 		foreach ($server in $Servers)
 		{
-			Write-Host "    $server" -NoNewline -ForegroundColor Cyan
+			Write-Console "    $server" -NoNewline -ForegroundColor Cyan
 			if ($server -match $env:COMPUTERNAME)
 			{
 				# If Local
 				Write-Host '-' -NoNewline -ForegroundColor Green
-				$gatheredData += Inner-GetBestPractices
-				Write-Host "> Completed!`n" -NoNewline -ForegroundColor Green
+				$scriptOutput = Invoke-InnerGetBestPractices
+				if ($scriptOutput)
+				{
+					$gatheredData += $scriptOutput
+				}
+				else
+				{
+					continue
+				}
+				
+				Write-Console "> Completed!`n" -NoNewline -ForegroundColor Green
 			}
 			else
 			{
 				# If Remote
 				Write-Host '-' -NoNewline -ForegroundColor Green
-				$InnerGetBestPracticesFunctionScript = "function Inner-GetBestPractices { ${function:Inner-GetBestPractices} }"
-				$gatheredData += Invoke-Command -ComputerName $server -ArgumentList $InnerGetBestPracticesFunctionScript, $VerbosePreference -ScriptBlock {
+				$InnerGetBestPracticesFunctionScript = "function Invoke-InnerGetBestPractices { ${function:Invoke-InnerGetBestPractices} }"
+				$scriptOutput = Invoke-Command -ComputerName $server -ArgumentList $InnerGetBestPracticesFunctionScript, $VerbosePreference -ScriptBlock {
 					Param ($script,
 						$VerbosePreference)
 					. ([ScriptBlock]::Create($script))
 					<#
 					if ($VerbosePreference.value__ -ne 0)
 					{
-						return Inner-GetBestPractices -Verbose
+						return Invoke-InnerGetBestPractices -Verbose
 					}
 					else
 					{
-						return Inner-GetBestPractices
+						return Invoke-InnerGetBestPractices
 					}
 					#>
-					return Inner-GetBestPractices
+					$scriptOutput = Invoke-InnerGetBestPractices
+					if ($scriptOutput)
+					{
+						return $scriptOutput
+					}
+					else
+					{
+						return $null
+					}
 				}
-				Write-Host "> Completed!`n" -NoNewline -ForegroundColor Green
+				if ($scriptOutput -or $null -ne $scriptOutput)
+				{
+					$gatheredData += $scriptOutput
+				}
+				Write-Console "> Completed!`n" -NoNewline -ForegroundColor Green
 			}
 		}
 	}
@@ -769,27 +946,37 @@ A high number of dynamic groups detected, this may cause some issues with group 
 	{
 		$i = 0
 		# Organize the output so it looks clean and seperated, each item will have its own number. (1, 2, 3, 4, etc.)
-		foreach ($item in $gatheredData)
-		{
-			$i++
-			$i = $i
-			$processedData += @"
-$i`. $item`n`r
-"@
-		}
-		if ($processedData)
-		{
-			$finalOut = @"
-$header
-$processedData
-"@
-		}
-		else
+		if ($null -eq $gatheredData -or $gatheredData -eq ' ')
 		{
 			$finalOut = @"
 $header
 No issues detected.
 "@
+		}
+		else
+		{
+			foreach ($item in $gatheredData)
+			{
+				$i++
+				$i = $i
+				$processedData += @"
+$i`. $item`n`r
+"@
+			}
+			if ($processedData)
+			{
+				$finalOut = @"
+$header
+$processedData
+"@
+			}
+			else
+			{
+				$finalOut = @"
+$header
+No issues detected.
+"@
+			}
 		}
 		Write-Verbose "Writing Best Practices text file: $OutputPath\Best Practices.txt"
 		$finalOut | Out-File -FilePath "$OutputPath\Best Practices.txt"

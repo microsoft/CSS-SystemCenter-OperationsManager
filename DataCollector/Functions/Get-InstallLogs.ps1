@@ -1,4 +1,4 @@
-Function Get-InstallLogs
+Function Invoke-GetInstallLogs
 {
 	param
 	(
@@ -8,7 +8,7 @@ Function Get-InstallLogs
 	BEGIN
 	{
 		#region Install Log Inner Function
-		function Inner-InstallLog
+		function Invoke-InnerInstallLog
 		{
 			try
 			{
@@ -36,7 +36,7 @@ Function Get-InstallLogs
 			}
 			catch
 			{
-				return "function:Inner-InstallLog - $($Error[0])"
+				return "function:Invoke-InnerInstallLog - $($Error[0])"
 			}
 			return "$env:TEMP\SCOM-DataCollector-InstallLogs\"
 		}
@@ -44,37 +44,37 @@ Function Get-InstallLogs
 		New-Item -ItemType Directory -Path "$OutputPath\Install Logs\AppData Install Logs" -Force -ErrorAction SilentlyContinue | Out-Null
 		$OutputDirectory = "$OutputPath\Install Logs\AppData Install Logs"
 		Write-Verbose "  Gathering Install Logs from:"
-		$InnerInstallLogFunctionScript = "function Inner-InstallLog { ${Function:Inner-InstallLog} }"
+		$InnerInstallLogFunctionScript = "function Invoke-InnerInstallLog { ${Function:Invoke-InnerInstallLog} }"
 		$RemotePath = "\\$env:COMPUTERNAME\$($OutputPath.Replace(':', '$'))"
 	}
 	PROCESS
 	{
 		foreach ($server in $Servers)
 		{
-			Write-Host "  $server" -NoNewline -ForegroundColor Cyan
+			Write-Console "  $server" -NoNewline -ForegroundColor Cyan
 			$serverPath = "$OutputPath\Install Logs\AppData Install Logs\$server"
 			New-Item -ItemType Directory -Path $serverPath -Force -ErrorAction SilentlyContinue | Out-Null
 			if ($server -match $env:COMPUTERNAME)
 			{
-				Write-Host '-' -NoNewline -ForegroundColor Green
+				Write-Console '-' -NoNewline -ForegroundColor Green
 				try
 				{
-					$finalout += Inner-InstallLog -ErrorAction Stop
-					if ($finalout -like "function:Inner-InstallLog*")
+					$finalout += Invoke-InnerInstallLog -ErrorAction Stop
+					if ($finalout -like "function:Invoke-InnerInstallLog*")
 					{
-						Write-Verbose "$(Time-Stamp)function:Get-InstallLogs - Local - $server - $($error[0])"
-						"$(Time-Stamp)function:Get-InstallLogs - Local - $server - $($error[0])" | Out-File $OutputPath\Error.log -Append
+						Write-Verbose "$(Invoke-TimeStamp)function:Invoke-GetInstallLogs - Local - $server - $($error[0])"
+						"$(Invoke-TimeStamp)function:Invoke-GetInstallLogs - Local - $server - $($error[0])" | Out-File $OutputPath\Error.log -Append
 					}
 					Copy-Item "\\$server\$($finalout.Replace(':', '$'))\*" $serverPath -Force -Recurse -ErrorAction Stop
 					Remove-Item "\\$server\$($finalout.Replace(':', '$'))\*" -Recurse -Force -ErrorAction SilentlyContinue
 				}
 				catch
 				{
-					Write-Verbose "$(Time-Stamp)function:Get-InstallLogs - Local - $server - $($error[0])"
-					"$(Time-Stamp)function:Get-InstallLogs - Local - $server - $($error[0])" | Out-File $OutputPath\Error.log -Append
+					Write-Verbose "$(Invoke-TimeStamp)function:Invoke-GetInstallLogs - Local - $server - $($error[0])"
+					"$(Invoke-TimeStamp)function:Invoke-GetInstallLogs - Local - $server - $($error[0])" | Out-File $OutputPath\Error.log -Append
 					
 				}
-				Write-Host "> Completed!`n" -NoNewline -ForegroundColor Green
+				Write-Console "> Completed!`n" -NoNewline -ForegroundColor Green
 			}
 			else
 			{
@@ -83,29 +83,29 @@ Function Get-InstallLogs
 					$remoteOutput += Invoke-Command -ComputerName $server -ArgumentList $InnerInstallLogFunctionScript -ScriptBlock {
 						Param ($script)
 						. ([ScriptBlock]::Create($script))
-						return Inner-InstallLog
+						return Invoke-InnerInstallLog
 					} -ErrorAction Stop
-					if ($remoteOutput -like "function:Inner-InstallLog*")
+					if ($remoteOutput -like "function:Invoke-InnerInstallLog*")
 					{
-						Write-Verbose "$(Time-Stamp)function:Get-InstallLogs - Remote - $server - $($error[0])"
-						"$(Time-Stamp)function:Get-InstallLogs - Remote - $server - $($error[0])" | Out-File $OutputPath\Error.log -Append
+						Write-Verbose "$(Invoke-TimeStamp)function:Invoke-GetInstallLogs - Remote - $server - $($error[0])"
+						"$(Invoke-TimeStamp)function:Invoke-GetInstallLogs - Remote - $server - $($error[0])" | Out-File $OutputPath\Error.log -Append
 					}
 					Copy-Item "\\$server\$($remoteOutput.Replace(':', '$'))\*" $serverPath -Force -Recurse -ErrorAction Stop
 					Remove-Item "\\$server\$($remoteOutput.Replace(':', '$'))\*" -Recurse -Force -ErrorAction SilentlyContinue
 				}
 				catch
 				{
-					Write-Verbose "$(Time-Stamp)function:Get-InstallLogs - Remote - $server - $($error[0])"
-					"$(Time-Stamp)function:Get-InstallLogs - Remote - $server - $($error[0])" | Out-File $OutputPath\Error.log -Append
+					Write-Verbose "$(Invoke-TimeStamp)function:Invoke-GetInstallLogs - Remote - $server - $($error[0])"
+					"$(Invoke-TimeStamp)function:Invoke-GetInstallLogs - Remote - $server - $($error[0])" | Out-File $OutputPath\Error.log -Append
 				}
 				
-				Write-Host '-' -NoNewline -ForegroundColor Green
-				Write-Host "> Completed!`n" -NoNewline -ForegroundColor Green
+				Write-Console '-' -NoNewline -ForegroundColor Green
+				Write-Console "> Completed!`n" -NoNewline -ForegroundColor Green
 			}
 		}
 	}
 	END
 	{
-		Write-Verbose "$(Time-Stamp)End of 'Get-InstallLogs'"
+		Write-Verbose "$(Invoke-TimeStamp)End of 'Invoke-GetInstallLogs'"
 	}
 }

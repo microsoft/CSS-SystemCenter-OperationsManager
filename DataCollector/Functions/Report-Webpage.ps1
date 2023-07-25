@@ -72,7 +72,7 @@ Function Report-Webpage
 	#$ReportOutput += "<p>Operational Database Server      :  $OpsDB_SQLServer</p>"
 	#$ReportOutput += "<p>Data Warehouse Database Server   :  $DW_SQLServer</p>"  
 	
-	$CSVFileLocation = "$CSVFile\output"
+	$CSVFileLocation = "$ScriptPath\output"
 	
 	# Tabs for Operations Manager Report
 	
@@ -110,7 +110,7 @@ Function Report-Webpage
 	
 	# General Information - OpsMgr
 	$reportDetail = $setupLocation.Product, $setupLocation.InstalledOn, $setupLocation.CurrentVersion, $setupLocation.ServerVersion, $setupLocation.UIVersion, $setupLocation.ManagementServerPort, "$ManagementServers", $setupLocation.DatabaseServerName, $setupLocation.DatabaseName, $setupLocation.InstallDirectory, "$OMSQLProperties"
-	$reportDetail = "<tr>" + ($reportDetail | % { "<td>$_</td>" }) + "</tr>"
+	$reportDetail = "<tr>" + ($reportDetail | ForEach-Object { "<td>$_</td>" }) + "</tr>"
 	$ReportOutput += @("<div id='general' class='tabcontent'>
 <h3>General Information</h3>
 <table style='width: 300px; '><th>Product</th><th>Installed On</th><th>Current Version</th><th>Server Version</th><th>UI Version</th><th>Management Server Port</th><th>Management Servers in Mgmt Group</th><th>Operations Manager DB Server</th><th>Operations Manager DB</th><th>Install Directory</th><th>Operations Manager SQL Properties</th>

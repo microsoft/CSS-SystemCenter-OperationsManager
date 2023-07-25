@@ -33,7 +33,7 @@ function Get-SCOMRunasAccount
 	#=======================================================
 	FOREACH ($RunAsProfile in (Get-SCOMRunAsProfile))
 	{
-		IF ($RunAsProfile.DisplayName -eq $null)
+		IF ($null -eq $RunAsProfile.DisplayName)
 		{
 			$ProfileName = $RunAsProfile.Name
 		}
@@ -100,11 +100,11 @@ function Get-SCOMRunasAccount
 		{
 			FOREACH ($override in $overrides)
 			{
-				IF ($override.ContextInstance -eq $null)
+				IF ($null -eq $override.ContextInstance)
 				{
 					$TargetID = $override.Context.id.Guid.ToString()
 					$TargetClass = Get-SCOMClass -Id $TargetID
-					IF ($TargetClass.DisplayName -eq $null)
+					IF ($null -eq $TargetClass.DisplayName)
 					{
 						$TargetName = $TargetClass.Name
 					}
@@ -117,7 +117,7 @@ function Get-SCOMRunasAccount
 				{
 					$TargetID = $override.ContextInstance.Guid.ToString()
 					$TargetClassInstance = Get-SCOMClassinstance -Id $TargetID
-					IF ($TargetClassInstance.DisplayName -eq $null)
+					IF ($null -eq $TargetClassInstance.DisplayName)
 					{
 						$TargetName = $TargetClassInstance.Name
 					}
@@ -127,7 +127,7 @@ function Get-SCOMRunasAccount
 					}
 				}
 				$secRef = $mg.Security.GetSecureReference($override.SecureReference.Id)
-				IF ($secRef.DisplayName -eq $null)
+				IF ($null -eq $secRef.DisplayName)
 				{
 					$ProfileName = $secRef.Name
 				}

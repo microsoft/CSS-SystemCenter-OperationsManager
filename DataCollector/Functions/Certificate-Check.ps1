@@ -1,4 +1,4 @@
-function Certificate-Check
+function Invoke-SCOMCertificateChecker
 {
 <#
 	.SYNOPSIS
@@ -16,37 +16,40 @@ function Certificate-Check
 		This script was originally designed for stand-alone PowerShell 1.0 - it does not require the OpsMgr PowerShell snapins.
 		Technet Article: https://gallery.technet.microsoft.com/scriptcenter/Troubleshooting-OpsMgr-27be19d3
 	
+	.PARAMETER Servers
+		Each Server you want to Check SCOM Certificates on.
+	
+	.PARAMETER SerialNumber
+		Check a specific Certificate serial number in the Local Machine Personal Store. Not reversed.
+	
 	.PARAMETER All
 		Check All Certificates in Local Machine Store.
 	
 	.PARAMETER OutputFile
 		Where to Output the File (txt, log, etc) for Script Execution.
 	
-	.PARAMETER SerialNumber
-		Check a specific Certificate serial number in the Local Machine Personal Store. Not reversed.
-	
-	.PARAMETER Servers
-		Each Server you want to Check SCOM Certificates on.
-	
 	.EXAMPLE
 		Check All Certificates on 4 Servers and outputting the results to C:\Temp\Output.txt:
-		PS C:\> .\Check-SCOMCertificates.ps1 -Servers ManagementServer1, ManagementServer2.contoso.com, Gateway.contoso.com, Agent1.contoso.com -All -OutputFile C:\Temp\Output.txt
+		PS C:\> .\Invoke-CheckSCOMCertificates.ps1 -Servers ManagementServer1, ManagementServer2.contoso.com, Gateway.contoso.com, Agent1.contoso.com -All -OutputFile C:\Temp\Output.txt
 	
 	.EXAMPLE
 		Check for a specific Certificate serialnumber in the Local Machine Personal Certificate store:
-		PS C:\> .\Check-SCOMCertificates.ps1 -SerialNumber 1f00000008c694dac94bcfdc4a000000000008
+		PS C:\> .\Invoke-CheckSCOMCertificates.ps1 -SerialNumber 1f00000008c694dac94bcfdc4a000000000008
 	
 	.EXAMPLE
 		Check all certificates on the local machine:
-		PS C:\> .\Check-SCOMCertificates.ps1 -All
+		PS C:\> .\Invoke-CheckSCOMCertificates.ps1 -All
 	
 	.NOTES
-		Update 09/2022 (Blake Drumm, https://github.com/blakedrumm/ )
-		Fixed bug introduced in last update. Certificates are checked correctly now.
+		Update 11/2022 (Blake Drumm, https://github.com/blakedrumm/ )
+		Script will now let you know if your registry key does not match any certificates in the local machine store.
 	
 		Update 09/2022 (Blake Drumm, https://github.com/blakedrumm/ )
+		Fixed bug introduced in last update. Certificates are checked correctly now.
+		
+		Update 09/2022 (Blake Drumm, https://github.com/blakedrumm/ )
 		Added ability to gather issuer. Fixed bug in output.
-
+		
 		Update 03/2022 (Blake Drumm, https://github.com/blakedrumm/ )
 		Major Update / alot of changes to how this script acts remotely and locally and added remoting abilites that are much superior to previous versions
 		
@@ -89,75 +92,57 @@ function Certificate-Check
 	(
 		[Parameter(Mandatory = $false,
 				   Position = 1,
-				   HelpMessage = 'Check All Certificates in Local Machine Store.')]
-		[Switch]$All,
+				   HelpMessage = 'Each Server you want to Check SCOM Certificates on.')]
+		[Array]$Servers,
 		[Parameter(Mandatory = $false,
 				   Position = 2,
-				   HelpMessage = 'Where to Output the Text Log for Script.')]
-		[String]$OutputFile,
-		[Parameter(Mandatory = $false,
-				   Position = 3,
 				   HelpMessage = 'Check a specific Certificate serial number in the Local Machine Personal Store. Not reversed.')]
 		[ValidateScript({ (Get-ChildItem cert:\LocalMachine\my\).SerialNumber })]
 		[string]$SerialNumber,
 		[Parameter(Mandatory = $false,
+				   Position = 3,
+				   HelpMessage = 'Check All Certificates in Local Machine Store.')]
+		[Switch]$All,
+		[Parameter(Mandatory = $false,
 				   Position = 4,
-				   HelpMessage = 'Each Server you want to Check SCOM Certificates on.')]
-		[Array]$Servers
+				   HelpMessage = 'Where to Output the Text Log for Script.')]
+		[String]$OutputFile
 	)
 	begin
 	{
-		#region CheckPermission
-		$checkingpermission = "Checking for elevated permissions..."
 		$MainScriptOutput = @()
-		Write-Host $checkingpermission -ForegroundColor Gray
-		$MainScriptOutput += $checkingpermission
-		if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
-[Security.Principal.WindowsBuiltInRole] "Administrator"))
-		{
-			$nopermission = "Insufficient permissions to run this script. Open the PowerShell console as an administrator and run this script again."
-			$MainScriptOutput += $nopermission
-			Write-Warning $nopermission
-			Start-Sleep 5
-			break
-		}
-		else
-		{
-			$permissiongranted = " Currently running as administrator - proceeding with script execution..."
-			$MainScriptOutput += $permissiongranted
-			Write-Host $permissiongranted -ForegroundColor Green
-		}
-		#endregion CheckPermission
-		Function Time-Stamp
+		
+		Function Invoke-TimeStamp
 		{
 			
 			$TimeStamp = Get-Date -Format "MM/dd/yyyy hh:mm:ss tt"
 			return $TimeStamp
 		}
-		function Inner-SCOMCertCheck
+		function Invoke-InnerSCOMCertCheck
 		{
 			[OutputType([string])]
 			param
 			(
 				[Parameter(Mandatory = $false,
 						   Position = 1,
+						   HelpMessage = 'Each Server you want to Check SCOM Certificates on.')]
+				[Array]$Servers,
+				[Parameter(Mandatory = $false,
+						   Position = 2,
+						   HelpMessage = 'Check a specific Certificate serial number in the Local Machine Personal Store. Not reversed.')]
+				[ValidateScript({ (Get-ChildItem cert:\LocalMachine\my\).SerialNumber })]
+				[string]$SerialNumber,
+				[Parameter(Mandatory = $false,
+						   Position = 3,
 						   HelpMessage = 'Check All Certificates in Local Machine Store.')]
 				[Switch]$All,
 				[Parameter(Mandatory = $false,
-						   Position = 2,
-						   HelpMessage = 'Where to Output the Text Log for Script.')]
-				[String]$OutputFile,
-				[Parameter(Mandatory = $false,
-						   Position = 3,
-						   HelpMessage = 'Check a specific Certificate serial number in the Local Machine Personal Store. Not reversed.')]
-				[string]$SerialNumber,
-				[Parameter(Mandatory = $false,
 						   Position = 4,
-						   HelpMessage = 'Each Server you want to Check SCOM Certificates on.')]
-				[Array]$Servers
+						   HelpMessage = 'Where to Output the Text Log for Script.')]
+				[String]$OutputFile
 			)
 			
-			Function Time-Stamp
+			Function Invoke-TimeStamp
 			{
 				
 				$TimeStamp = Get-Date -Format "MM/dd/yyyy hh:mm:ss tt"
@@ -165,7 +150,7 @@ function Certificate-Check
 			}
 			$out = @()
 			$out += "`n" + @"
-$(Time-Stamp) : Starting Script
+$(Invoke-TimeStamp) : Starting Script
 
 "@
 			# Consider all certificates in the Local Machine "Personal" store
@@ -173,7 +158,7 @@ $(Time-Stamp) : Starting Script
 			$text1 = "Running against server: $env:COMPUTERNAME"
 			$out += "`n" + $text1
 			Write-Host $text1 -ForegroundColor Cyan
-			if ($certs -eq $null)
+			if ($null -eq $certs)
 			{
 				$text2 = @"
     There are no certificates in the Local Machine `"Personal`" store.
@@ -187,7 +172,7 @@ $(Time-Stamp) : Starting Script
 			}
 			$x = 0
 			$a = 0
-			$alreadyCheckedThis = $false
+			
 			if ($All)
 			{
 				$FoundCount = "Found: $($certs.Count) certificates"
@@ -201,6 +186,7 @@ $(Time-Stamp) : Starting Script
 			{
 				$x++
 				$x = $x
+				
 				#If the serialnumber argument is present
 				if ($SerialNumber)
 				{
@@ -235,7 +221,7 @@ $(Time-Stamp) : Starting Script
 					else
 					{
 						$regKeys = get-itemproperty -path "HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Machine Settings"
-						if ($regKeys.ChannelCertificateSerialNumber -eq $null)
+						if ($null -eq $regKeys.ChannelCertificateSerialNumber)
 						{
 							$text36 = "Serial Number is not written to registry"
 							$out += "`n" + $text36
@@ -253,14 +239,18 @@ $(Time-Stamp) : Starting Script
 						{
 							$regSerial = ""
 							$regKeys.ChannelCertificateSerialNumber | ForEach-Object { $regSerial += $_.ToString("X2") }
-							if ($regSerial -eq "" -or $null) { $regSerial = "`{Empty`}" }
-							if ($regSerial -ne $($certSerialReversed -Join (" ")))
-							{
-								continue
-							}
+							if (-NOT ($regSerial)) { $regSerial = "`{Empty`}" }
+						}
+						if ($($certSerialReversed -Join (" ")) -ne $regSerial)
+						{
+							$a++
+							$a = $a
+							$NotPresentCount = $a
+							continue
 						}
 					}
 				}
+				
 				$certificateReversed = -1 .. - $($cert.SerialNumber.Length) | ForEach-Object { $cert.SerialNumber[2 * $_] + $cert.SerialNumber[2 * $_ + 1] }
 				$text4 = @"
 =====================================================================================================================
@@ -270,7 +260,7 @@ $(if (!$SerialNumber -and $All) { "($x`/$($certs.Count)) " })Examining Certifica
 
 `tIssued by: $(($cert.Issuer -split ',' | Where-Object { $_ -match "CN=|DC=" }).Replace("CN=", '').Replace("DC=", '').Trim() -join '.')
 
-`tSerial Number: "$($cert.SerialNumber)"
+`tSerial Number: $($cert.SerialNumber)
 
 `tSerial Number Reversed: $($certificateReversed)
 =====================================================================================================================
@@ -291,7 +281,7 @@ $(if (!$SerialNumber -and $All) { "($x`/$($certs.Count)) " })Examining Certifica
 						continue;
 					}
 					$fqdnRegexPattern = "CN=" + $fqdn.Replace(".", "\.") + '(,.*)?$'
-					if (!($cert.SubjectName.Name -match $fqdnRegexPattern))
+					if ((($cert.SubjectName.Name).ToUpper()) -notmatch ($fqdnRegexPattern.ToUpper()))
 					{
 						$text5 = "Certificate Subjectname Mismatch"
 						$out += "`n" + $text5
@@ -304,7 +294,7 @@ $(if (!$SerialNumber -and $All) { "($x`/$($certs.Count)) " })Examining Certifica
 "@
 						$out += "`n" + $text6
 						Write-Host $text6
-						$false
+						$pass = $false
 					}
 					else { $true; $text7 = "Certificate Subjectname is Good"; $out += "`n" + $text7; Write-Host $text7 -BackgroundColor Green -ForegroundColor Black }
 				}
@@ -372,7 +362,7 @@ Expiration
 				# Enhanced key usage extension
 				
 				$enhancedKeyUsageExtension = $cert.Extensions | Where-Object { $_.ToString() -match "X509EnhancedKeyUsageExtension" }
-				if ($enhancedKeyUsageExtension -eq $null)
+				if ($null -eq $enhancedKeyUsageExtension)
 				{
 					$text16 = "Enhanced Key Usage Extension Missing"
 					$out += "`n" + $text16
@@ -385,7 +375,7 @@ Expiration
 				else
 				{
 					$usages = $enhancedKeyUsageExtension.EnhancedKeyUsages
-					if ($usages -eq $null)
+					if ($null -eq $usages)
 					{
 						$text18 = "Enhanced Key Usage Extension Missing"
 						$out += "`n" + $text18
@@ -431,7 +421,7 @@ Enhanced Key Usage Extension is Good
 				# KeyUsage extension
 				
 				$keyUsageExtension = $cert.Extensions | Where-Object { $_.ToString() -match "X509KeyUsageExtension" }
-				if ($keyUsageExtension -eq $null)
+				if ($null -eq $keyUsageExtension)
 				{
 					$text24 = "Key Usage Extensions Missing"
 					$out += "`n" + $text24
@@ -448,7 +438,7 @@ Enhanced Key Usage Extension is Good
 				else
 				{
 					$usages = $keyUsageExtension.KeyUsages
-					if ($usages -eq $null)
+					if ($null -eq $usages)
 					{
 						$text26 = "Key Usage Extensions Missing"
 						$out += "`n" + $text26
@@ -487,7 +477,7 @@ Enhanced Key Usage Extension is Good
 				# KeySpec
 				
 				$keySpec = $cert.PrivateKey.CspKeyContainerInfo.KeyNumber
-				if ($keySpec -eq $null)
+				if ($null -eq $keySpec)
 				{
 					$text31 = "KeySpec Missing / Not Found"
 					$out += "`n" + $text31
@@ -536,7 +526,7 @@ Enhanced Key Usage Extension is Good
 				else
 				{
 					$regKeys = get-itemproperty -path "HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Machine Settings"
-					if ($regKeys.ChannelCertificateSerialNumber -eq $null)
+					if ($null -eq $regKeys.ChannelCertificateSerialNumber)
 					{
 						$text38 = "Serial Number is not written to the registry"
 						$out += "`n" + $text38
@@ -601,7 +591,7 @@ Enhanced Key Usage Extension is Good
 				{
 					$rootCaCert = $chain.ChainElements | Select-Object -property Certificate -last 1
 					$localMachineRootCert = Get-ChildItem cert:\LocalMachine\Root | Where-Object { $_ -eq $rootCaCert.Certificate }
-					if ($localMachineRootCert -eq $null)
+					if ($null -eq $localMachineRootCert)
 					{
 						$text45 = "Certification Chain Root CA Missing"
 						$out += "`n" + $text45
@@ -645,23 +635,25 @@ Enhanced Key Usage Extension is Good
 				}
 				$out += "`n" + " " # This is so there is white space between each Cert. Makes it less of a jumbled mess.
 			}
+			
 			if ($certs.Count -eq $NotPresentCount)
 			{
-				$text49 = "Unable to locate any certificates on this server that match the criteria specified OR the serial number in the registry does not match any certificates present."; $out += "`n" + $text49; Write-Host $text49 -ForegroundColor Red
+				$text49 = "    Unable to locate any certificates on this server that match the criteria specified OR the serial number in the registry does not match any certificates present."; $out += "`n" + $text49; Write-Host $text49 -ForegroundColor Red
+				$text50 = "    Data in registry: $certSerialReversed"; $out += "`n" + $text50; Write-Host $text50 -ForegroundColor Gray
 			}
 			$out += "`n" + @"
 
-$(Time-Stamp) : Script Completed
+$(Invoke-TimeStamp) : Script Completed
 "@
 			Write-Verbose "$out"
 			return $out
 		}
-		$InnerCheckSCOMCertificateFunctionScript = "function Inner-SCOMCertCheck { ${function:Inner-SCOMCertCheck} }"
+		$InnerCheckSCOMCertificateFunctionScript = "function Invoke-InnerSCOMCertCheck { ${function:Invoke-InnerSCOMCertCheck} }"
 	}
 	PROCESS
 	{
 		#region Function
-		function Check-SCOMCertificate
+		function Invoke-CheckSCOMCertificate
 		{
 			[OutputType([string])]
 			[CmdletBinding()]
@@ -669,20 +661,21 @@ $(Time-Stamp) : Script Completed
 			(
 				[Parameter(Mandatory = $false,
 						   Position = 1,
+						   HelpMessage = 'Each Server you want to Check SCOM Certificates on.')]
+				[Array]$Servers,
+				[Parameter(Mandatory = $false,
+						   Position = 2,
+						   HelpMessage = 'Check a specific Certificate serial number in the Local Machine Personal Store. Not reversed.')]
+				[ValidateScript({ (Get-ChildItem cert:\LocalMachine\my\).SerialNumber })]
+				[string]$SerialNumber,
+				[Parameter(Mandatory = $false,
+						   Position = 3,
 						   HelpMessage = 'Check All Certificates in Local Machine Store.')]
 				[Switch]$All,
 				[Parameter(Mandatory = $false,
-						   Position = 2,
-						   HelpMessage = 'Where to Output the Text Log for Script.')]
-				[String]$OutputFile,
-				[Parameter(Mandatory = $false,
-						   Position = 3,
-						   HelpMessage = 'Check a specific Certificate serial number in the Local Machine Personal Store. Not reversed.')]
-				[string]$SerialNumber,
-				[Parameter(Mandatory = $false,
 						   Position = 4,
-						   HelpMessage = 'Each Server you want to Check SCOM Certificates on.')]
-				[Array]$Servers
+						   HelpMessage = 'Where to Output the Text Log for Script.')]
+				[String]$OutputFile
 			)
 			if ($null -eq $Servers) { $Servers = $env:COMPUTERNAME }
 			else
@@ -701,8 +694,8 @@ Certificate Checker
 				Write-Host '========================================================'
 				Write-Host @"
 Certificate Checker
-
-"@
+"@ -ForegroundColor Black -BackgroundColor Cyan
+				Write-Host " "
 				$MainScriptOutput += $startofline
 				if ($server -ne $env:COMPUTERNAME)
 				{
@@ -712,7 +705,7 @@ Certificate Checker
 							$SerialNumber,
 							$VerbosePreference)
 						. ([ScriptBlock]::Create($script))
-						return Inner-SCOMCertCheck -All:$All -SerialNumber $SerialNumber
+						return Invoke-InnerSCOMCertCheck -All:$All -SerialNumber $SerialNumber
 						
 					} -ErrorAction SilentlyContinue
 				}
@@ -720,11 +713,11 @@ Certificate Checker
 				{
 					if ($VerbosePreference.value__ -ne 0)
 					{
-						$MainScriptOutput += Inner-SCOMCertCheck -Servers $Servers -All:$All -SerialNumber:$SerialNumber -Verbose -ErrorAction SilentlyContinue
+						$MainScriptOutput += Invoke-InnerSCOMCertCheck -Servers $Servers -All:$All -SerialNumber:$SerialNumber -Verbose -ErrorAction SilentlyContinue
 					}
 					else
 					{
-						$MainScriptOutput += Inner-SCOMCertCheck -Servers $Servers -All:$All -SerialNumber:$SerialNumber -ErrorAction SilentlyContinue
+						$MainScriptOutput += Invoke-InnerSCOMCertCheck -Servers $Servers -All:$All -SerialNumber:$SerialNumber -ErrorAction SilentlyContinue
 					}
 					
 				}
@@ -741,18 +734,18 @@ Certificate Checker
 		#region DefaultActions
 		if ($Servers -or $OutputFile -or $All -or $SerialNumber)
 		{
-			Check-SCOMCertificate -Servers $Servers -OutputFile $OutputFile -All:$All -SerialNumber:$SerialNumber
+			Invoke-CheckSCOMCertificate -Servers $Servers -OutputFile $OutputFile -All:$All -SerialNumber:$SerialNumber
 		}
 		else
 		{
-			# Modify line 755 if you want to change the default behavior when running this script through Powershell ISE
+			# Modify line 748 if you want to change the default behavior when running this script through Powershell ISE
 			#
 			# Examples: 
-			# Check-SCOMCertificate -SerialNumber 1f00000008c694dac94bcfdc4a000000000008
-			# Check-SCOMCertificate -All
-			# Check-SCOMCertificate -All -OutputFile C:\Temp\Certs-Output.txt
-			# Check-SCOMCertificate -Servers MS01, MS02
-			Check-SCOMCertificate
+			# Invoke-CheckSCOMCertificate -SerialNumber 1f00000008c694dac94bcfdc4a000000000008
+			# Invoke-CheckSCOMCertificate -All
+			# Invoke-CheckSCOMCertificate -All -OutputFile C:\Temp\Certs-Output.txt
+			# Invoke-CheckSCOMCertificate -Servers MS01, MS02
+			Invoke-CheckSCOMCertificate
 		}
 		#endregion DefaultActions
 	}

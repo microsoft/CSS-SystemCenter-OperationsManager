@@ -1,6 +1,6 @@
 function Get-SCOMGeneralInfo
 {
-	#Last modified: October 24th, 2022
+	#Last modified: June 20th, 2023
 	param
 	(
 		[cmdletbinding()]
@@ -15,15 +15,15 @@ function Get-SCOMGeneralInfo
 		$line = $_.InvocationInfo.ScriptLineNumber
 		$msg = $e.Message
 		
-		Write-Verbose "$(Time-Stamp)Caught Exception: $e :: Message: $msg :: at line: $line"
-		"$(Time-Stamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+		Write-Verbose "$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line"
+		"$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
 	}
-	Write-Verbose "$(Time-Stamp)Loading Product Version"
+	Write-Verbose "$(Invoke-TimeStamp)Loading Product Version"
 	. $ScriptPath`\Functions\ProductVersions\ProductVersion.ps1
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 67%" -PercentComplete 67
 	foreach ($server in $Servers)
 	{
-		function Inner-GeneralInfoFunction
+		function Invoke-InnerGeneralInfoFunction
 		{
 			param
 			(
@@ -41,21 +41,49 @@ function Get-SCOMGeneralInfo
 				$msg = $e.Message
 				
 				Write-Verbose "Caught Exception: $e at line: $line"
-				"$(Time-Stamp)Caught Exception: $e at line: $line" | Out-File $OutputPath\Error.log -Append
+				"$(Invoke-TimeStamp)Caught Exception: $e at line: $line" | Out-File $OutputPath\Error.log -Append
 			}
-			Function Time-Stamp
+			Function Invoke-TimeStamp
 			{
 				$TimeStamp = Get-Date -Format "MM/dd/yyyy hh:mm:ss tt"
 				return "$TimeStamp - "
 			}
+			function Write-Console
+			{
+				param
+				(
+					[Parameter(Position = 1)]
+					[string]$Text,
+					[Parameter(Position = 2)]
+					$ForegroundColor,
+					[Parameter(Position = 3)]
+					[switch]$NoNewLine
+				)
+				
+				if ([Environment]::UserInteractive)
+				{
+					if ($ForegroundColor)
+					{
+						Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+					}
+					else
+					{
+						Write-Host $Text -NoNewLine:$NoNewLine
+					}
+				}
+				else
+				{
+					Write-Output $Text
+				}
+			}
 			Write-Verbose "================================================================"
-			Write-Verbose "$(Time-Stamp)Started gathering on this machine: $env:COMPUTERNAME"
-			Write-Verbose "$(Time-Stamp)Loading Product Version Function"
+			Write-Verbose "$(Invoke-TimeStamp)Started gathering on this machine: $env:COMPUTERNAME"
+			Write-Verbose "$(Invoke-TimeStamp)Loading Product Version Function"
 			#region AllServersGeneralInfo
 			$ProductVersionScript = "function Get-ProductVersion { ${function:Get-ProductVersion} }"
 			. ([ScriptBlock]::Create($ProductVersionScript))
-			Write-Verbose "$(Time-Stamp)Grabbing System Uptime"
-			$Uptime = (($(Get-Date) - $(Get-CimInstance -ClassName Win32_OperatingSystem | Select LastBootUpTime -ExpandProperty LastBootUpTime)) | Select Hours, Minutes, Seconds) | % { Write-Output "$($_.Hours) hour(s), $($_.Minutes) minute(s), $($_.Seconds) second(s)" }
+			Write-Verbose "$(Invoke-TimeStamp)Grabbing System Uptime"
+			$Uptime = (($(Get-Date) - $(Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object LastBootUpTime -ExpandProperty LastBootUpTime)) | Select-Object Hours, Minutes, Seconds) | ForEach-Object { Write-Output "$($_.Hours) hour(s), $($_.Minutes) minute(s), $($_.Seconds) second(s)" }
 			try
 			{
 				$winrmConfig = winrm get winrm/config
@@ -274,20 +302,20 @@ function Get-SCOMGeneralInfo
 			{
 				$TLS12Enforced = $False
 			}
-			Write-Verbose "$(Time-Stamp)Gathering File System Allocation Information"
+			Write-Verbose "$(Invoke-TimeStamp)Gathering File System Allocation Information"
 			$driveData = @()
 			try
 			{
 				$Freespace | Foreach-Object {
 					$driveLetter = ($_.Drive -replace "\\", '')
-					$driveData += (Get-CimInstance Win32_Volume) | Where { $driveLetter -eq $_.DriveLetter } | Select-Object -Property @{ Name = 'DriveLetter'; Expression = { $_.DriveLetter } }, @{ Name = 'BytesPerCluster'; Expression = { "$($_.BlockSize) ($($_.BlockSize / 1kb) KB)" } }
+					$driveData += (Get-CimInstance Win32_Volume) | Where-Object { $driveLetter -eq $_.DriveLetter } | Select-Object -Property @{ Name = 'DriveLetter'; Expression = { $_.DriveLetter } }, @{ Name = 'BytesPerCluster'; Expression = { "$($_.BlockSize) ($($_.BlockSize / 1kb) KB)" } }
 				}
 			}
 			catch
 			{
-				Write-Verbose "$(Time-Stamp) - Unable to gather the File System Allocation Information!"
+				Write-Verbose "$(Invoke-TimeStamp) - Unable to gather the File System Allocation Information!"
 			}
-			Write-Verbose "$(Time-Stamp)Gathering w32tm Information"
+			Write-Verbose "$(Invoke-TimeStamp)Gathering w32tm Information"
 			$w32tmQueryStatus = & 'w32tm' '/query', '/status'
 			try
 			{
@@ -301,9 +329,9 @@ function Get-SCOMGeneralInfo
 			###################################################
 			# Test .NET Framework version on ALL servers
 			# Get version from registry
-			Write-Verbose "$(Time-Stamp)Checking .NET Version"
+			Write-Verbose "$(Invoke-TimeStamp)Checking .NET Version"
 			$RegPath = "HKLM:SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\"
-			[int]$ReleaseRegValue = (Get-ItemProperty $RegPath -ErrorAction SilentlyContinue).Release
+			[int]$ReleaseRegValue = (Get-ItemProperty $RegPath -ErrorAction SilentlyContinue).Release | Select-Object -Unique
 			# Interpret .NET version
 			[string]$dotNetVersionString = switch ($ReleaseRegValue)
 			{
@@ -321,7 +349,6 @@ function Get-SCOMGeneralInfo
 				"460805" { ".NET Framework 4.7" }
 				"461308" { ".NET Framework 4.7.1" }
 				"461310" { ".NET Framework 4.7.1" }
-				"461814" { ".NET Framework 4.7.2" }
 				"461808" { ".NET Framework 4.7.2" }
 				"461814" { ".NET Framework 4.7.2" }
 				"528040" { ".NET Framework 4.8" }
@@ -330,10 +357,10 @@ function Get-SCOMGeneralInfo
 				"528449" { ".NET Framework 4.8" }
 				default { "Unknown .NET version: $ReleaseRegValue" }
 			}
-			Write-Verbose "$(Time-Stamp) - .NET Version detected: $dotNetVersionString"
-			Write-Host '-' -NoNewline -ForegroundColor Green
+			Write-Verbose "$(Invoke-TimeStamp) - .NET Version detected: $dotNetVersionString"
+			#Write-Console '-' -NoNewline -ForegroundColor Green
 			#endregion AllServersGeneralInfo
-			Write-Verbose "$(Time-Stamp)End all servers general info"
+			Write-Verbose "$(Invoke-TimeStamp)End all servers general info"
 			Add-Type -TypeDefinition @"
 public class OpsMgrSetupRegKey{
     public string CurrentVersion;
@@ -352,7 +379,7 @@ public class OpsMgrSetupRegKey{
 "@
 			# this is the path we want to retrieve the values from
 			$opsMgrSetupRegKeyPath = 'HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup'
-			Write-Verbose "$(Time-Stamp)Start gathering registry information regarding Operations Manager in this path: $opsMgrSetupRegKeyPath"
+			Write-Verbose "$(Invoke-TimeStamp)Start gathering registry information regarding Operations Manager in this path: $opsMgrSetupRegKeyPath"
 			# get the values
 			try
 			{
@@ -382,19 +409,19 @@ public class OpsMgrSetupRegKey{
 			catch
 			{
 				$setuplocation = $null
-				Write-Verbose "$(Time-Stamp)Unable to return the data from registry: $opsMgrSetupRegKeyPath"
+				Write-Verbose "$(Invoke-TimeStamp)Unable to return the data from registry: $opsMgrSetupRegKeyPath"
 			}
 			if ($setuplocation)
 			{
 				if ($setuplocation.Product -eq "Microsoft Monitoring Agent")
 				{
-					Write-Verbose "$(Time-Stamp)Found Microsoft Monitoring Agent"
+					Write-Verbose "$(Invoke-TimeStamp)Found Microsoft Monitoring Agent"
 					$Agent = $true
 					$installdir = (Resolve-Path "$($setuplocation.InstallDirectory)`..\")
 				}
 				elseif ($setuplocation.Product -like "System Center Operations Manager*Server")
 				{
-					Write-Verbose "$(Time-Stamp)Found System Center Operations Manager Server"
+					Write-Verbose "$(Invoke-TimeStamp)Found System Center Operations Manager Server"
 					$ManagementServer = $true
 					$installdir = (Resolve-Path "$($setuplocation.InstallDirectory)`..\")
 					$SCOMPath = $installdir.Path.TrimEnd("\")
@@ -404,11 +431,11 @@ public class OpsMgrSetupRegKey{
 					}
 					if ($setuplocation.InstallDirectory -like "*Gateway*")
 					{
-						Write-Verbose "$(Time-Stamp)Found System Center Operations Manager Gateway Server"
+						Write-Verbose "$(Invoke-TimeStamp)Found System Center Operations Manager Gateway Server"
 						$Gateway = $true
 					}
 				}
-				Write-Verbose "$(Time-Stamp)Grabbing Health Service State Folder Properties"
+				Write-Verbose "$(Invoke-TimeStamp)Grabbing Health Service State Folder Properties"
 				$healthServiceState = Get-ItemProperty "$($setuplocation.InstallDirectory)\Health Service State"
 				
 				function Get-FolderSize
@@ -447,34 +474,34 @@ public class OpsMgrSetupRegKey{
 				try
 				{
 					$configUpdated = @()
-					Write-Verbose "$(Time-Stamp)Grabbing Connector Configuration Cache on $env:COMPUTERNAME"
+					Write-Verbose "$(Invoke-TimeStamp)Grabbing Connector Configuration Cache on $env:COMPUTERNAME"
 					$mgsFound = Get-ChildItem -Path "$($HSStateFolder.Location)\Connector Configuration Cache" -ErrorAction Stop
-					Write-Verbose "$(Time-Stamp)Management Groups Found: $mgsFound"
+					Write-Verbose "$(Invoke-TimeStamp)Management Groups Found: $mgsFound"
 					foreach ($ManagementGroup in $mgsFound)
 					{
-						Write-Verbose "$(Time-Stamp)Current Management Group: $ManagementGroup"
+						Write-Verbose "$(Invoke-TimeStamp)Current Management Group: $ManagementGroup"
 						$HSConfigInformation = $null
 						$HSConfigInformation = [pscustomobject] @{ }
 						$HSConfigInformation | Add-Member -MemberType NoteProperty -Name 'Management Group Name' -Value $ManagementGroup.Name
 						try
 						{
-							Write-Verbose "$(Time-Stamp)Get-ItemProperty `"$($ManagementGroup.PSPath)\OpsMgrConnector.Config.xml`""
+							Write-Verbose "$(Invoke-TimeStamp)Get-ItemProperty `"$($ManagementGroup.PSPath)\OpsMgrConnector.Config.xml`""
 							$LastUpdated = ((Get-ItemProperty "$($ManagementGroup.PSPath)\OpsMgrConnector.Config.xml" -ErrorAction Stop).LastWriteTime | Get-Date -Format "MMMM dd, yyyy h:mm tt")
 							$HSConfigInformation | Add-Member -MemberType NoteProperty -Name 'Last Time Configuration Updated' -Value $($LastUpdated)
 						}
 						catch
 						{
-							Write-Verbose "$(Time-Stamp)Could not detect file: OpsMgrConnector.Config.xml"
+							Write-Verbose "$(Invoke-TimeStamp)Could not detect file: OpsMgrConnector.Config.xml"
 							$HSConfigInformation | Add-Member -MemberType NoteProperty -Name 'Last Time Configuration Updated' -Value 'Could not detect file: OpsMgrConnector.Config.xml'
 						}
-						Write-Verbose "$(Time-Stamp)Adding: $HSConfigInformation"
+						Write-Verbose "$(Invoke-TimeStamp)Adding: $HSConfigInformation"
 						$configUpdated += $HSConfigInformation
 					}
-					Write-Verbose "$(Time-Stamp)Completed: $configUpdated"
+					Write-Verbose "$(Invoke-TimeStamp)Completed: $configUpdated"
 				}
 				catch
 				{
-					Write-Verbose "$(Time-Stamp)$($error[0])"
+					Write-Verbose "$(Invoke-TimeStamp)$($error[0])"
 					$configUpdated = $false
 				}
 			}
@@ -528,17 +555,17 @@ public class OpsMgrSetupRegKey{
 				}
 				$ServerVersionSwitch = (Get-ProductVersion -Product SCOM -BuildVersion $setuplocation.ServerVersion)
 				$LocalServerVersionSwitchOut = $ServerVersionSwitch + " (" + $setuplocation.ServerVersion + ")"
-				Write-Verbose "$(Time-Stamp)Gathering Server Version - Registry - via Product Version Function: $LocalServerVersionSwitchOut"
+				Write-Verbose "$(Invoke-TimeStamp)Gathering Server Version - Registry - via Product Version Function: $LocalServerVersionSwitchOut"
 				
 				$serverdll = Get-Item "$($setuplocation.InstallDirectory)`MOMAgentManagement.dll" | foreach-object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion }
 				$ServerVersionDLLSwitch = (Get-ProductVersion -Product SCOM -BuildVersion $serverdll)
 				$ServerVersionDLL = $ServerVersionDLLSwitch + " (" + $serverdll + ")"
-				Write-Verbose "$(Time-Stamp)Gathering Server Version - DLL - via Product Version Function: $ServerVersionDLL"
+				Write-Verbose "$(Invoke-TimeStamp)Gathering Server Version - DLL - via Product Version Function: $ServerVersionDLL"
 				
 				$OctoberPatchserverDLL = Get-Item "$($setuplocation.InstallDirectory)`MOMModules2.dll" | foreach-object { "{0}" -f [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion }
 				$OctoberPatchserverDLLSwitch = (Get-ProductVersion -Product SCOM -BuildVersion $OctoberPatchserverDLL)
 				$OctoberPatchserver = $OctoberPatchserverDLLSwitch + " (" + $OctoberPatchserverDLL + ")"
-				Write-Verbose "$(Time-Stamp)Gathering Server Version (SCOM 2019 October 2021 Patch) - DLL - via Product Version Function: $ServerVersionDLL"
+				Write-Verbose "$(Invoke-TimeStamp)Gathering Server Version (SCOM 2019 October 2021 Patch) - DLL - via Product Version Function: $ServerVersionDLL"
 				
 				try
 				{
@@ -547,7 +574,7 @@ public class OpsMgrSetupRegKey{
 					{
 						$ServerAgentVersionDLLSwitch = (Get-ProductVersion -Product SCOM -BuildVersion $ServerAgentOMVersionDLL)
 						$ServerAgentVersionDLL = $ServerAgentVersionDLLSwitch + " (" + $ServerAgentOMVersionDLL + ")"
-						Write-Verbose "$(Time-Stamp)Server Agent Management DLL Version - $ServerAgentVersionDLL"
+						Write-Verbose "$(Invoke-TimeStamp)Server Agent Management DLL Version - $ServerAgentVersionDLL"
 						$ServerAgentVersion_info = $true
 					}
 					$ServerAgentUnixVersionDLL = Get-ItemProperty "$($setuplocation.InstallDirectory)`\AgentManagement\UnixAgents\DownloadedKits\*" -ErrorAction Stop | Format-Table Name -AutoSize | Out-String -Width 4096
@@ -607,7 +634,7 @@ public class OpsMgrSetupRegKey{
 				{
 					try
 					{
-						$SQLPatchVersionOpsDB = (Import-Csv "$OutputPath`\MG_SQLPatchVersion_OpsDB.csv" -ErrorAction Stop) | Where { $_.State -eq 'COMPLETED' } | Sort-Object @{ Expression = { [version]$_.Value } } -Descending | Select-Object -First 1
+						$SQLPatchVersionOpsDB = (Import-Csv "$OutputPath`\MG_SQLPatchVersion_OpsDB.csv" -ErrorAction Stop) | Where-Object { $_.State -eq 'COMPLETED' } | Sort-Object @{ Expression = { [version]$_.Value } } -Descending | Select-Object -First 1
 						if ($SQLPatchVersionOpsDB)
 						{
 							$SQLPatchVersionOpsDBSwitch = (Get-ProductVersion -Product SCOM -BuildVersion $SQLPatchVersionOpsDB.Value)
@@ -622,12 +649,12 @@ public class OpsMgrSetupRegKey{
 						$line = $_.InvocationInfo.ScriptLineNumber
 						$msg = $e.Message
 						
-						Write-Verbose "$(Time-Stamp)Caught Exception: $($error[0]) at line: $line"
-						"$(Time-Stamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
+						Write-Verbose "$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line"
+						"$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
 					}
 					try
 					{
-						$SQLPatchVersionDW = (Import-Csv "$OutputPath`\MG_SQLPatchVersion_DW.csv" -ErrorAction SilentlyContinue) | Where{ $_.State -eq 'COMPLETED' } | Sort-Object @{ Expression = { [version]$_.Value } } -Descending | Select-Object -First 1
+						$SQLPatchVersionDW = (Import-Csv "$OutputPath`\MG_SQLPatchVersion_DW.csv" -ErrorAction SilentlyContinue) | Where-Object{ $_.State -eq 'COMPLETED' } | Sort-Object @{ Expression = { [version]$_.Value } } -Descending | Select-Object -First 1
 						if ($SQLPatchVersionDW)
 						{
 							$SQLPatchVersionDWSwitch = (Get-ProductVersion -Product SCOM -BuildVersion $SQLPatchVersionDW.Value)
@@ -642,19 +669,19 @@ public class OpsMgrSetupRegKey{
 						$line = $_.InvocationInfo.ScriptLineNumber
 						$msg = $e.Message
 						
-						Write-Verbose "$(Time-Stamp)Caught Exception: $($error[0]) at line: $line"
-						"$(Time-Stamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
+						Write-Verbose "$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line"
+						"$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
 					}
 				}
 				
 				$CurrentVersionFinal = $CurrentVersionSwitch + " (" + $setuplocation.CurrentVersion + ")"
 				
 				
-				$ReportingRegistryKey = get-itemproperty -path "HKLM:\SOFTWARE\Microsoft\System Center Operations Manager\12\Setup\Reporting" -ErrorAction SilentlyContinue | Select-Object * -exclude PSPath, PSParentPath, PSChildName, PSProvider, PSDrive
+				$ReportingRegistryKey = get-itemproperty -path "HKLM:\SOFTWARE\Microsoft\System Center Operations Manager\12\Setup\Reporting" -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty PSPath, PSParentPath, PSChildName, PSProvider, PSDrive
 				
 				try
 				{
-					Write-Verbose "$(Time-Stamp)Running - Get-SCOMRMSEmulator"
+					Write-Verbose "$(Invoke-TimeStamp)Running - Get-SCOMRMSEmulator"
 					$rmsEmulator = Get-SCOMRMSEmulator -ErrorAction Stop | Select-Object -Property DisplayName -ExpandProperty DisplayName
 				}
 				catch
@@ -662,23 +689,23 @@ public class OpsMgrSetupRegKey{
 					$rmsEmulator = "Unable to run Get-SCOMRMSEmulator."
 				}
 				
-				Write-Host "-" -NoNewline -ForegroundColor Green
+				#Write-Console "-" -NoNewline -ForegroundColor Green
 				try
 				{
-					Write-Verbose "$(Time-Stamp)Running - Get-SCOMManagementGroup"
+					Write-Verbose "$(Invoke-TimeStamp)Running - Get-SCOMManagementGroup"
 					$ManagementGroup = Get-SCOMManagementGroup -ErrorAction Stop | Select-Object -Property Name -ExpandProperty Name
 				}
 				catch
 				{
 					$ManagementGroup = "Unable to run Get-SCOMManagementGroup."
 				}
-				$LastUpdatedConfiguration = (Get-WinEvent -LogName 'Operations Manager' -ErrorAction SilentlyContinue | Where{ $_.Id -eq 1210 } | Select-Object -First 1).TimeCreated
+				$LastUpdatedConfiguration = (Get-WinEvent -LogName 'Operations Manager' -ErrorAction SilentlyContinue | Where-Object{ $_.Id -eq 1210 } | Select-Object -First 1).TimeCreated
 				if (!$LastUpdatedConfiguration) { $LastUpdatedConfiguration = "No Event ID 1210 Found in Operations Manager Event Log" }
 				else { $LastUpdatedConfiguration = $LastUpdatedConfiguration | Get-Date -Format "MMMM dd, yyyy h:mm tt" }
 				
 				[double]$WorkflowCount = $null
 				[double]$WorkflowCount = (((Get-Counter -Counter '\Health Service\Workflow Count' -ErrorAction SilentlyContinue -SampleInterval 5 -MaxSamples 5).CounterSamples).CookedValue | Measure-Object -Average).Average
-				Write-Verbose "$(Time-Stamp)Workflow count - $WorkflowCount"
+				Write-Verbose "$(Invoke-TimeStamp)Workflow count - $WorkflowCount"
 				#=======================================================================
 				
 				$ACSReg = "HKLM:\SYSTEM\CurrentControlSet\Services\AdtServer"
@@ -698,7 +725,7 @@ public class OpsMgrSetupRegKey{
 			}
 			elseif ($Agent)
 			{
-				Write-Verbose "$(Time-Stamp)Agent Detected"
+				Write-Verbose "$(Invoke-TimeStamp)Agent Detected"
 				#$ManagementGroups = Get-Item "HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Agent Management Groups\*" | Select-Object PSChildName -ExpandProperty PSChildName
 				$ADIntegration = (Get-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\HealthService\Parameters\ConnectorManager).EnableADIntegration
 				
@@ -708,12 +735,12 @@ public class OpsMgrSetupRegKey{
 					'1' { "Enabled" }
 				}
 				
-				$LastUpdatedConfiguration = (Get-WinEvent -LogName 'Operations Manager' | Where{ $_.Id -eq 1210 } | Select-Object -First 1).TimeCreated
+				$LastUpdatedConfiguration = (Get-WinEvent -LogName 'Operations Manager' | Where-Object{ $_.Id -eq 1210 } | Select-Object -First 1).TimeCreated
 				if (!$LastUpdatedConfiguration) { $LastUpdatedConfiguration = "No Event ID 1210 Found in Operations Manager Event Log" }
 				else { $LastUpdatedConfiguration = $LastUpdatedConfiguration | Get-Date -Format "MMMM dd, yyyy h:mm tt" }
 				
 				[string]$SCOMAgentURVersion = (Get-ProductVersion -Product SCOM -BuildVersion $setuplocation.CurrentVersion)
-				Write-Verbose "$(Time-Stamp)Load Agent Scripting Module"
+				Write-Verbose "$(Invoke-TimeStamp)Load Agent Scripting Module"
 				# Load Agent Scripting Module
 				#=======================================================================
 				$AgentCfg = New-Object -ComObject "AgentConfigManager.MgmtSvcCfg"
@@ -722,13 +749,13 @@ public class OpsMgrSetupRegKey{
 				# Get Agent Management groups section
 				#=======================================================================
 				#Get management groups
-				Write-Verbose "$(Time-Stamp)Gathering Management Groups"
+				Write-Verbose "$(Invoke-TimeStamp)Gathering Management Groups"
 				$MGs = $AgentCfg.GetManagementGroups()
 				$MGDetails = @()
 				foreach ($MG in $MGs)
 				{
-					Write-Verbose "$(Time-Stamp)Found Management Group - $MG"
-					$MGDetails += $MG | Select *
+					Write-Verbose "$(Invoke-TimeStamp)Found Management Group - $MG"
+					$MGDetails += $MG | Select-Object *
 					<#
 				    $managementGroup.ManagementGroupName
 				    $managementGroup.ManagementServer
@@ -745,7 +772,7 @@ public class OpsMgrSetupRegKey{
 				$AgentSupportsOMS = $AgentCfg | Get-Member -Name 'GetCloudWorkspaces'
 				IF (!$AgentSupportsOMS)
 				{
-					Write-Verbose "$(Time-Stamp)This agent version does not support Cloud Workspaces"
+					Write-Verbose "$(Invoke-TimeStamp)This agent version does not support Cloud Workspaces"
 					#This agent version does not support Cloud Workspaces.
 				}
 				ELSE
@@ -759,7 +786,7 @@ public class OpsMgrSetupRegKey{
 					{
 						$OMSList = $OMSList.TrimEnd(", ")
 					}
-					Write-Verbose "$(Time-Stamp)OMS List - $OMSList"
+					Write-Verbose "$(Invoke-TimeStamp)OMS List - $OMSList"
 					#Get ProxyURL
 					[string]$ProxyURL = $AgentCfg.proxyUrl
 				}
@@ -773,7 +800,7 @@ public class OpsMgrSetupRegKey{
 					[array]$CertValue = (Get-ItemProperty $CertRegKey).ChannelCertificateSerialNumber
 					IF ($Certvalue)
 					{
-						Write-Verbose "$(Time-Stamp)Found Certificate Registry Key"
+						Write-Verbose "$(Invoke-TimeStamp)Found Certificate Registry Key"
 						$CertLoaded = $True
 						[string]$ThumbPrint = (Get-ItemProperty $CertRegKey).ChannelCertificateHash
 						$Cert = Get-ChildItem -path cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $ThumbPrint }
@@ -794,13 +821,13 @@ public class OpsMgrSetupRegKey{
 					}
 					ELSE
 					{
-						Write-Verbose "$(Time-Stamp)MOMCertImport needs to be run"
+						Write-Verbose "$(Invoke-TimeStamp)MOMCertImport needs to be run"
 						$CertLoaded = $False
 					}
 				}
 				ELSE
 				{
-					Write-Verbose "$(Time-Stamp)Certificate key not present"
+					Write-Verbose "$(Invoke-TimeStamp)Certificate key not present"
 					$CertLoaded = $False
 				}
 				# Build IP List from Windows Computer Property
@@ -834,9 +861,9 @@ public class OpsMgrSetupRegKey{
 			
 			# This returns information almost identical to the Task Manager
 			
-			function Resource-Info
+			function Invoke-ResourceInfo
 			{
-				$CPUInfo = (Get-CIMInstance -ErrorAction Stop -Class 'CIM_Processor')
+				$CPUInfo = (Get-CIMInstance -ErrorAction Stop -ClassName 'CIM_Processor')
 				$ComputerSystem = (Get-CIMInstance -ErrorAction Stop 'CIM_ComputerSystem')
 				"Computer Manufacturer: $($ComputerSystem.Manufacturer)"
 				"  Computer Model     : $($ComputerSystem.Model)"
@@ -876,11 +903,11 @@ public class OpsMgrSetupRegKey{
 				
 				" "
 				
-				$MemoryInfo = (Get-CIMInstance -ErrorAction Stop -Class 'CIM_PhysicalMemory')
+				$MemoryInfo = (Get-CIMInstance -ErrorAction Stop -ClassName 'CIM_PhysicalMemory')
 				"Total Memory: $(($MemoryInfo | Measure-Object -Property capacity -Sum).sum / 1gb) GB"
-				$MemorySlotInfo = (Get-CIMInstance -ErrorAction Stop -Class 'Win32_PhysicalMemoryArray')
+				$MemorySlotInfo = (Get-CIMInstance -ErrorAction Stop -ClassName 'Win32_PhysicalMemoryArray')
 				"  Memory Slots      : $($MemoryInfo.Count) of $($MemorySlotInfo.MemoryDevices) used"
-				$OSInfo = Get-CIMInstance -ErrorAction Stop -Class CIM_OperatingSystem
+				$OSInfo = Get-CIMInstance -ErrorAction Stop -ClassName CIM_OperatingSystem
 				"  Memory Utilization: $([math]::Round(($OSInfo.TotalVisibleMemorySize - $OSInfo.FreePhysicalMemory) / 1mb, 1)) GB / $([math]::Round($OSInfo.TotalVisibleMemorySize / 1mb, 1)) GB ($([math]::Round(((($OSInfo.TotalVisibleMemorySize - $OSInfo.FreePhysicalMemory) * 100)/ $OSInfo.TotalVisibleMemorySize), 0))%)"
 				" "
 				"  Memory Sockets:"
@@ -921,7 +948,8 @@ public class OpsMgrSetupRegKey{
 							26{ 'DDR4' }
 							default { 'Unknown' }
 						})"
-					"      Memory Size: $($memory.Capacity / 1gb) GB"
+					"      Memory Size: $(if ($memory.Capacity) { "$($memory.Capacity / 1gb)GB" }
+						else { 'Unknown' }) "
 					"      Form Factor: $(
 						switch ($memory.FormFactor)
 						{
@@ -952,15 +980,52 @@ public class OpsMgrSetupRegKey{
 							24{ 'FB-DIMM' }
 							default { 'Unknown' }
 						})"
-					"     Memory Speed: $($memory.ConfiguredClockSpeed) MHz"
+					"     Memory Speed: $(if ($memory.ConfiguredClockSpeed) { $memory.ConfiguredClockSpeed + 'MHz' }
+						else { 'Unknown' })"
 					" "
 					return
 				}
 			}
-			$ResourceAllocation = try { Resource-Info | Out-String -Width 4096 }catch{ 'Unable to gather OS Resource Information.' }
+			$IISVersionInfo = try
+			{
+				$IISPath = Test-Path "$env:SystemRoot\system32\inetsrv\InetMgr.exe" -ErrorAction SilentlyContinue
+				if ($IISPath)
+				{
+					$ProductVersion = ((Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\InetStp' -ErrorAction Stop | Select-Object @{ n = "ProductVersion"; e = { (Get-ItemProperty ($_.InstallPath + "\w3wp.exe") -ErrorAction Stop).VersionInfo.ProductVersion } })).ProductVersion
+					"IIS $ProductVersion"
+				}
+			}
+			catch
+			{
+				"Unable to detect IIS version."
+				#potential error code
+				#use continue or break keywords
+				$e = $_.Exception
+				$line = $_.InvocationInfo.ScriptLineNumber
+				$msg = $e.Message
+				
+				Write-Verbose "$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line"
+				"$(Invoke-TimeStamp)Caught Exception: (Unable to detect IIS version) $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+			}
+			$ResourceAllocation = try { Invoke-ResourceInfo | Out-String -Width 4096 }
+			catch
+			{
+				'Unable to gather OS Resource Information.'
+				#potential error code
+				#use continue or break keywords
+				$e = $_.Exception
+				$line = $_.InvocationInfo.ScriptLineNumber
+				$msg = $e.Message
+				
+				Write-Verbose "$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line"
+				"$(Invoke-TimeStamp)Caught Exception: (Unable to gather OS Resource Information) $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+			}
 			
 			$setupOutput = [pscustomobject]@{ }
+			$scomVersion = [pscustomobject]@{ }
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'Computer Name' -Value $env:COMPUTERNAME
+			# SCOM Version
+			$scomVersion | Add-Member -MemberType NoteProperty -Name 'Computer Name' -Value $env:COMPUTERNAME
 			if ($Uptime)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'System Uptime' -Value $Uptime
@@ -971,8 +1036,20 @@ public class OpsMgrSetupRegKey{
 			}
 			
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'IP Address' -Value $IPList
+			# SCOM Version
+			$scomVersion | Add-Member -MemberType NoteProperty -Name 'IP Address' -Value $IPList
+			
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'OS Version' -Value $OSVersion
+			# SCOM Version
+			$scomVersion | Add-Member -MemberType NoteProperty -Name 'OS Version' -Value $OSVersion
+			
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'WinHTTP Proxy' -Value $WinHTTPProxy
+			if ($IISVersionInfo)
+			{
+				$setupOutput | Add-Member -MemberType NoteProperty -Name 'IIS Version Installed' -Value $IISVersionInfo
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'IIS Version Installed' -Value $IISVersionInfo
+			}
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'Resource Information' -Value $ResourceAllocation
 			if ($setuplocation)
 			{
@@ -995,43 +1072,66 @@ public class OpsMgrSetupRegKey{
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Current Agent Version (Registry: HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup)' -Value $SCOMAgentVersion
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Current Agent Version (DLL: ..\Agent\Tools\TMF\OMAgentTraceTMFVer.Dll)' -Value $SCOMAgentVersionDLL
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Current Agent Version (Registry: HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup)' -Value $SCOMAgentVersion
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Current Agent Version (DLL: ..\Agent\Tools\TMF\OMAgentTraceTMFVer.Dll)' -Value $SCOMAgentVersionDLL
 			}
 			if ($CurrentVersionFinal)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Current Version (Registry: HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup)' -Value $CurrentVersionFinal
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Current Version (Registry: HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup)' -Value $CurrentVersionFinal
 			}
 			if ($LocalServerVersionSwitchOut)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Server Version (Registry: HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup)' -Value $LocalServerVersionSwitchOut
 				$setupOutput | Add-Member -MemberType NoteProperty -Name '               (DLL: ..\Server\MOMAgentManagement.dll)' -Value $ServerVersionDLL
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Server Version (Registry: HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup)' -Value $LocalServerVersionSwitchOut
+				$scomVersion | Add-Member -MemberType NoteProperty -Name '               (DLL: ..\Server\MOMAgentManagement.dll)' -Value $ServerVersionDLL
 			}
 			if ('10.19.10552.0' -eq $OctoberPatchserverDLL)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Server Version [Patch] (DLL: ..\Server\MOMModules2.dll)' -Value $OctoberPatchserver
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Server Version [Patch] (DLL: ..\Server\MOMModules2.dll)' -Value $OctoberPatchserver
 			}
 			if ($ServerAgentVersion_info)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Agent Management Windows Version (DLL: ..\Server\AgentManagement\amd64\OMVersion.dll)' -Value $ServerAgentVersionDLL
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Agent Management Unix/Linux Versions (Files: ..\Server\AgentManagement\UnixAgents\DownloadedKits\*)' -Value $ServerAgentUnixVersionDLL
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Agent Management Windows Version (DLL: ..\Server\AgentManagement\amd64\OMVersion.dll)' -Value $ServerAgentVersionDLL
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Agent Management Unix/Linux Versions (Files: ..\Server\AgentManagement\UnixAgents\DownloadedKits\*)' -Value $ServerAgentUnixVersionDLL
 			}
 			
 			if ($UI_info)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'UI Version (Registry: HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup)' -Value $UIVersionFinal
 				$setupOutput | Add-Member -MemberType NoteProperty -Name '           (EXE: ..\Console\Microsoft.EnterpriseManagement.Monitoring.Console.exe)' -Value $UIVersionExe
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'UI Version (Registry: HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup)' -Value $UIVersionFinal
+				$scomVersion | Add-Member -MemberType NoteProperty -Name '           (EXE: ..\Console\Microsoft.EnterpriseManagement.Monitoring.Console.exe)' -Value $UIVersionExe
 			}
 			if ($WebConsole_info)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name "Web Console Version (DLL: $WebConsolePatchPath)" -Value $WebConsoleVersionDLL
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name "Web Console Version (DLL: $WebConsolePatchPath)" -Value $WebConsoleVersionDLL
 				if ('10.19.10550.0' -eq $WebConsolePatchDLL)
 				{
 					$setupOutput | Add-Member -MemberType NoteProperty -Name "Web Console Version [Patch] (DLL: $WebConsolePatchPath)" -Value $WebConsolePatchVersionDLL
+					# SCOM Version
+					$scomVersion | Add-Member -MemberType NoteProperty -Name "Web Console Version [Patch] (DLL: $WebConsolePatchPath)" -Value $WebConsolePatchVersionDLL
 				}
 			}
 			if ($LocalManagementServer)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Operations Manager DB Version (Query)' -Value $SQLPatchVersionOpsDBInfo
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Data Warehouse DB Version (Query)' -Value $SQLPatchVersionDWInfo
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Operations Manager DB Version (Query)' -Value $SQLPatchVersionOpsDBInfo
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Data Warehouse DB Version (Query)' -Value $SQLPatchVersionDWInfo
 			}
 			if ($ManagementServer)
 			{
@@ -1109,10 +1209,17 @@ public class OpsMgrSetupRegKey{
 			}
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'TLS 1.2 Enforced' -Value $TLS12Enforced
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'Powershell Version' -Value $PSVersion
+			# SCOM Version
+			$scomVersion  | Add-Member -MemberType NoteProperty -Name 'Powershell Version' -Value $PSVersion
+			
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'CLR Version' -Value $CLRVersion
+			# SCOM Version
+			$scomVersion | Add-Member -MemberType NoteProperty -Name 'CLR Version' -Value $CLRVersion
 			if ($dotNetVersionString)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name '.NET Version' -Value $dotNetVersionString
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name '.NET Version' -Value $dotNetVersionString
 			}
 			if ($PowershellGPOs)
 			{
@@ -1144,10 +1251,10 @@ public class OpsMgrSetupRegKey{
 			}
 			try
 			{
-				$ReportingRegistryKey = get-itemproperty -path "HKLM:\SOFTWARE\Microsoft\System Center Operations Manager\12\Setup\Reporting" -ErrorAction SilentlyContinue | Select-Object * -exclude PSPath, PSParentPath, PSChildName, PSProvider, PSDrive
+				$ReportingRegistryKey = get-itemproperty -path "HKLM:\SOFTWARE\Microsoft\System Center Operations Manager\12\Setup\Reporting" -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty PSPath, PSParentPath, PSChildName, PSProvider, PSDrive
 				if ($ReportingRegistryKey)
 				{
-					Write-Verbose "$(Time-Stamp)  Found SSRS Registry Key: $ReportingRegistryKey"
+					Write-Verbose "$(Invoke-TimeStamp)  Found SSRS Registry Key: $ReportingRegistryKey"
 						<#
 $setupOutputRemote += @"
 
@@ -1164,9 +1271,9 @@ $setupOutputRemote += @"
 					try
 					{
 						
-						$RS = "root\Microsoft\SqlServer\ReportServer\" + (Get-CimInstance -Namespace root\Microsoft\SqlServer\ReportServer -Class __Namespace -Recurse -ErrorAction Stop | Select -First 1).Name
-						$RSV = $RS + "\" + (Get-CimInstance -Namespace $RS -Class __Namespace -Recurse -ErrorAction Stop | Select -First 1).Name + "\Admin"
-						$RSInfo = Get-CimInstance -Namespace $RSV -Class MSReportServer_ConfigurationSetting -ErrorAction Stop
+						$RS = "root\Microsoft\SqlServer\ReportServer\" + (Get-CimInstance -Namespace root\Microsoft\SqlServer\ReportServer -ClassName __Namespace -ErrorAction Stop | Select-Object -First 1).Name
+						$RSV = $RS + "\" + (Get-CimInstance -Namespace $RS -ClassName __Namespace -ErrorAction Stop | Select-Object -First 1).Name + "\Admin"
+						$RSInfo = Get-CimInstance -Namespace $RSV -ClassName MSReportServer_ConfigurationSetting -ErrorAction Stop
 						
 						try
 						{
@@ -1176,7 +1283,7 @@ $setupOutputRemote += @"
 						catch
 						{
 							$RSInfoSwitchInfo = "Unable to detect / return Product version for SSRS"
-							Write-Verbose "$(Time-Stamp)Unable to detect / return Product version for SSRS: $($error[0])"
+							Write-Verbose "$(Invoke-TimeStamp)Unable to detect / return Product version for SSRS: $($error[0])"
 						}
 						
 						$SSRS_Info = [pscustomobject]@{ }
@@ -1217,8 +1324,8 @@ $setupOutputRemote += @"
 						$line = $_.InvocationInfo.ScriptLineNumber
 						$msg = $e.Message
 						
-						Write-Verbose "$(Time-Stamp)Caught Exception during Reporting Services gathering: $e :: Message: $msg :: at line: $line"
-						"$(Time-Stamp)Caught Exception during Reporting Services gathering: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+						Write-Verbose "$(Invoke-TimeStamp)Caught Exception during Reporting Services gathering: $e :: Message: $msg :: at line: $line"
+						"$(Invoke-TimeStamp)Caught Exception during Reporting Services gathering: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
 					}
 				}
 			}
@@ -1230,16 +1337,19 @@ $setupOutputRemote += @"
 				$line = $_.InvocationInfo.ScriptLineNumber
 				$msg = $e.Message
 				
-				Write-Verbose "$(Time-Stamp)Caught Exception during Reporting Services gathering: $e :: Message: $msg :: at line: $line"
-				"$(Time-Stamp)Caught Exception during Reporting Services gathering: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+				Write-Verbose "$(Invoke-TimeStamp)Caught Exception during Reporting Services gathering: $e :: Message: $msg :: at line: $line"
+				"$(Invoke-TimeStamp)Caught Exception during Reporting Services gathering: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
 			}
 			if ($w32tmQueryStatus)
 			{
+				Write-Verbose "$(Invoke-TimeStamp)Adding w32tm status"
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'w32tm Query Status' -Value ($w32tmQueryStatus | Out-String -Width 4096)
+				Write-Verbose "$(Invoke-TimeStamp)Completed adding w32tm status."
 			}
+			Write-Verbose "$(Invoke-TimeStamp)Adding services: $localservices"
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'Services' -Value $localServices
 			Write-Verbose "Completed Inner-GeneralInformation Function : `n$setupOutput"
-			return $setupOutput
+			return $setupOutput, $scomVersion
 		}
 		#End Inner General Info
 		trap
@@ -1249,13 +1359,13 @@ $setupOutputRemote += @"
 			$e = $_.Exception
 			$line = $_.InvocationInfo.ScriptLineNumber
 			$msg = $e.Message
-			Write-Host "Caught Exception: $e at line: $line" -ForegroundColor Red
-			"$(Time-Stamp)Caught Exception: $e at line: $line" | Out-File $OutputPath\Error.log -Append
+			Write-Console "Caught Exception: $e at line: $line" -ForegroundColor Red
+			"$(Invoke-TimeStamp)Caught Exception: $e at line: $line" | Out-File $OutputPath\Error.log -Append
 		}
 		if ($server -match "^$env:COMPUTERNAME") # If server equals Local Computer
 		{
 			$localServicesList = (Get-CimInstance Win32_service).where{ $_.name -eq 'omsdk' -or $_.name -eq 'cshost' -or $_.name -eq 'HealthService' -or $_.name -eq 'System Center Management APM' -or $_.name -eq 'AdtAgent' -or $_.name -match "^SQL" -or $_.name -match "MSSQL" -or $_.name -like "SQLAgent*" -or $_.name -eq 'SQLBrowser' -or $_.name -eq 'SQLServerReportingServices' }
-			$localServicesList | % {
+			$localServicesList | ForEach-Object {
 				[PSCustomObject]@{
 					ComputerName	   = $server
 					ServiceDisplayName = $_.DisplayName
@@ -1265,17 +1375,20 @@ $setupOutputRemote += @"
 					CurrentState	   = $_.State
 				}
 			} | Sort-Object ServiceName | Export-Csv "$OutputPath`\OS_Services.csv" -NoTypeInformation -Append
-			$GeneralInfoGather = Inner-GeneralInfoFunction -LocalManagementServer
+			$GeneralInfoGather = Invoke-InnerGeneralInfoFunction -LocalManagementServer
+			$ManagementServerDetails = $GeneralInfoGather | Select-Object -Index 1
+			$ManagementServerDetails | Out-File "$OutputPath`\MS_Information.txt" -Append
+			#$ManagementServerDetails | Export-Csv "$OutputPath`\MS_Information.csv" -NoTypeInformation -Append
 			@"
 ======================================
 =---- Local General Information  ----=
 ======================================
 "@ | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
-			$GeneralInfoGather | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
+			$GeneralInfoGather | Select-Object -Index 0 | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
 		}
 		else
 		{
-			$InnerGeneralInfoFunctionScript = "function Inner-GeneralInfoFunction { ${function:Inner-GeneralInfoFunction} }"
+			$InnerGeneralInfoFunctionScript = "function Invoke-InnerGeneralInfoFunction { ${function:Invoke-InnerGeneralInfoFunction} }"
 			$ProductVersionScript = "function Get-ProductVersion { ${function:Get-ProductVersion} }"
 			$GeneralInfoGather = Invoke-Command -ComputerName $server -ArgumentList $InnerGeneralInfoFunctionScript, $ProductVersionScript, $VerbosePreference -ScriptBlock {
 				Param ($script,
@@ -1283,18 +1396,24 @@ $setupOutputRemote += @"
 					$VerbosePreference)
 				. ([ScriptBlock]::Create($script))
 				. ([ScriptBlock]::Create($versionscript))
+				
 				if ($VerbosePreference -eq 'continue')
 				{
-					Inner-GeneralInfoFunction -Verbose
+					$Output = Invoke-InnerGeneralInfoFunction -Verbose
+					return $Output[0], $Output[1]
 				}
 				else
 				{
-					Inner-GeneralInfoFunction
+					$Output = Invoke-InnerGeneralInfoFunction -Verbose
+					return $Output[0], $Output[1]
 				}
 				
 			}
+			$ManagementServerDetails = $GeneralInfoGather | Select-Object -Index 1
+			$ManagementServerDetails | Select-Object * -ExcludeProperty PSComputerName, RunspaceId | Out-File "$OutputPath`\MS_Information.txt" -Append
+			#$ManagementServerDetails | Export-Csv "$OutputPath`\MS_Information.csv" -NoTypeInformation -Append
 			$ServicesList = (Get-CimInstance Win32_service -ComputerName $server).where{ $_.name -eq 'omsdk' -or $_.name -eq 'cshost' -or $_.name -eq 'HealthService' -or $_.name -eq 'System Center Management APM' -or $_.name -eq 'AdtAgent' -or $_.name -match "MSSQL" -or $_.name -like "SQLAgent*" -or $_.name -eq 'SQLBrowser' -or $_.name -eq 'SQLServerReportingServices' }
-			$ServicesList | % {
+			$ServicesList | ForEach-Object {
 				[PSCustomObject]@{
 					ComputerName	   = $server
 					ServiceDisplayName = $_.DisplayName
@@ -1309,7 +1428,7 @@ $setupOutputRemote += @"
 =----- Remote General Information -----=
 ========================================
 "@ | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
-			$GeneralInfoGather | select * -ExcludeProperty PSComputerName, RunspaceId | Out-String -Width 4096 | Out-File -FilePath "$OutputPath\General Information.txt" -Append
+			$GeneralInfoGather[0] | Select-Object * -ExcludeProperty PSComputerName, RunspaceId | Out-String -Width 4096 | Out-File -FilePath "$OutputPath\General Information.txt" -Append
 		}
 	}
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 76%" -PercentComplete 76
@@ -1322,7 +1441,7 @@ $setupOutputRemote += @"
 	{
 		$OMSQLPropertiesImport = Import-Csv "$OutputPath`\SQL_Properties_OpsDB.csv"
 		try { $OMSQLOwnerImport = Import-Csv "$OutputPath`\SQL_DBOwner_OpsDB.csv" }
-		catch { "$(Time-Stamp)Caught Exception: $e at line: $line" | Out-File $OutputPath\Error.log -Append }
+		catch { "$(Invoke-TimeStamp)Caught Exception: $e at line: $line" | Out-File $OutputPath\Error.log -Append }
 		##########################################
 		#########################################
 		#####################################
@@ -1410,14 +1529,14 @@ $setupOutputRemote += @"
 		$msg = $e.Message
 		
 		Write-Verbose "Caught Exception: $($error[0]) at line: $line"
-		"$(Time-Stamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
+		"$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
 	}
-	Write-Host "-" -NoNewline -ForegroundColor Green
+	#Write-Console "-" -NoNewline -ForegroundColor Green
 	try
 	{
 		$DWSQLPropertiesImport = Import-Csv "$OutputPath`\SQL_Properties_DW.csv"
 		try { $DWSQLOwnerImport = Import-Csv "$OutputPath`\SQL_DBOwner_DW.csv" }
-		catch { "$(Time-Stamp)Caught Exception: $e at line: $line" | Out-File $OutputPath\Error.log -Append }
+		catch { "$(Invoke-TimeStamp)Caught Exception: $e at line: $line" | Out-File $OutputPath\Error.log -Append }
 		##########################################
 		#########################################
 		#####################################
@@ -1488,7 +1607,7 @@ $setupOutputRemote += @"
 		$msg = $e.Message
 		
 		Write-Verbose "Caught Exception: $($error[0]) at line: $line"
-		"$(Time-Stamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
+		"$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
 	}
 	try
 	{
@@ -1564,7 +1683,7 @@ public class OpsMgrSetupRegKey{
 		{
 			$UserRolesImport = Import-Csv "$OutputPath`\UserRoles.csv"
 			$UserRoles = "User Role Name" + " - " + "Is System?" + "`n----------------------------`n"
-			$UserRolesImport | % {
+			$UserRolesImport | ForEach-Object {
 				if ($_.IsSystem -eq $false)
 				{
 					$foundsomething = $true
@@ -1585,7 +1704,7 @@ public class OpsMgrSetupRegKey{
 			$msg = $e.Message
 			
 			Write-Verbose "Caught Exception: $($error[0]) at line: $line"
-			"$(Time-Stamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
+			"$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
 		}
 	}
 	catch
@@ -1602,7 +1721,11 @@ public class OpsMgrSetupRegKey{
 	}
 	
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 80%" -PercentComplete 80
-	$UpdatesOutput = foreach ($Server in $Servers) { Write-Host "-" -NoNewline -ForegroundColor Green; Invoke-Command -ComputerName $Server -ScriptBlock { Get-HotFix } -ErrorAction SilentlyContinue }
+	$UpdatesOutput = foreach ($Server in $Servers)
+	{
+		#Write-Console "-" -NoNewline -ForegroundColor Green;
+		Invoke-Command -ComputerName $Server -ScriptBlock { Get-HotFix } -ErrorAction SilentlyContinue
+	}
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 82%" -PercentComplete 82
 	if ($UpdatesOutput.HotfixId)
 	{
@@ -1611,7 +1734,7 @@ public class OpsMgrSetupRegKey{
 =----- Installed Updates  -----=
 ================================
 "@ | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
-		$UpdatesOutput | Sort InstalledOn, PSComputerName -Descending | Add-Member -MemberType AliasProperty -Name 'Computer Name' -Value PSComputerName -PassThru | Select-Object -Property 'Computer Name', Description, HotFixID, InstalledBy, InstalledOn, Caption | Format-Table * -AutoSize | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
+		$UpdatesOutput | Sort-Object InstalledOn, PSComputerName -Descending | Add-Member -MemberType AliasProperty -Name 'Computer Name' -Value PSComputerName -PassThru | Select-Object -Property 'Computer Name', Description, HotFixID, InstalledBy, InstalledOn, Caption | Format-Table * -AutoSize | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
 	}
 	else
 	{
@@ -1633,7 +1756,7 @@ public class OpsMgrSetupRegKey{
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 80%" -PercentComplete 85
 	foreach ($server in $ManagementServers)
 	{
-		Write-Host "-" -NoNewline -ForegroundColor Green
+		Write-Console "-" -NoNewline -ForegroundColor Green
 		if ($server -notmatch $env:COMPUTERNAME)
 		{
 			try
@@ -1647,7 +1770,7 @@ public class OpsMgrSetupRegKey{
 						$e = $_.Exception
 						$line = $_.InvocationInfo.ScriptLineNumber
 						$msg = $e.Message
-						Write-Host "Caught Exception: $e at line: $line" -ForegroundColor Red
+						Write-Console "Caught Exception: $e at line: $line" -ForegroundColor Red
 					}
 					$scompath = (get-itemproperty -path "HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup" -ErrorAction Stop).InstallDirectory
 					return (Get-Content -Path "$scompath`\ConfigService.config" -ErrorAction Stop)
@@ -1665,7 +1788,7 @@ public class OpsMgrSetupRegKey{
 			}
 			catch
 			{
-				"$(Time-Stamp)$server (Remote) - Unreachable" | Out-File $OutputPath\Error.log -Append
+				"$(Invoke-TimeStamp)$server (Remote) - Unreachable" | Out-File $OutputPath\Error.log -Append
 				Write-Output "$server (Remote) - Unreachable" | Out-File -FilePath "$OutputPath\General Information.txt" -Append
 			}
 		}
@@ -1687,7 +1810,7 @@ public class OpsMgrSetupRegKey{
 		try
 		{
 			Write-Progress -Activity "Collection Running" -Status "Progress-> 88%" -PercentComplete 88
-			Write-Host "-" -NoNewline -ForegroundColor Green
+			Write-Console "-" -NoNewline -ForegroundColor Green
 			if ($server -ne $Comp)
 			{
 				try
@@ -1724,7 +1847,7 @@ public class OpsMgrSetupRegKey{
 	########### Gateway Stuff 
 	try
 	{
-		$Gateways = Get-SCOMManagementServer -ErrorAction Stop | where { $_.IsGateway -eq $true }
+		$Gateways = Get-SCOMManagementServer -ErrorAction Stop | Where-Object { $_.IsGateway -eq $true }
 	}
 	catch
 	{
@@ -1746,7 +1869,7 @@ public class OpsMgrSetupRegKey{
 			try
 			{
 				$gwOSVersion = $null
-				$gwOSVersion = (Get-SCOMClass -Name Microsoft.Windows.OperatingSystem -ErrorAction Stop | Get-SCOMClassInstance -ErrorAction Stop | select path, displayname | Where { $_.Path -match "$($Gateway.DisplayName)" }).DisplayName
+				$gwOSVersion = (Get-SCOMClass -Name Microsoft.Windows.OperatingSystem -ErrorAction Stop | Get-SCOMClassInstance -ErrorAction Stop | Select-Object path, displayname | Where-Object { $_.Path -match "$($Gateway.DisplayName)" }).DisplayName
 			}
 			catch
 			{
@@ -1762,20 +1885,20 @@ public class OpsMgrSetupRegKey{
 			}
 			
 			$gwinfo += [pscustomobject]@{
-				'Gateway Name' = $Gateway.DisplayName
-				'Agent Count'  = $gwAgentCount
-				'Gateway Domain' = $Gateway.Domain
-				'OS Version'   = $gwOSVersion
-				'Action Account' = $Gateway.ActionAccountIdentity
-				'IP Address'   = $Gateway.IPAddress
-				'Communication Port' = $Gateway.CommunicationPort
-				'AemEnabled'   = $Gateway.AemEnabled
-				'Last Modified' = $Gateway.LastModified.ToString().Trim()
-				'Installed On' = $Gateway.InstallTime.ToString().Trim()
-				'Primary Management Server' = $Gateway.GetPrimaryManagementServer().DisplayName
-				'Failover Management Servers' = $Gateway.GetFailoverManagementServers().DisplayName
+				'Gateway Name'						     = $Gateway.DisplayName
+				'Agent Count'						     = $gwAgentCount
+				'Gateway Domain'						 = $Gateway.Domain
+				'OS Version'							 = $gwOSVersion
+				'Action Account'						 = $Gateway.ActionAccountIdentity
+				'IP Address'							 = $Gateway.IPAddress
+				'Communication Port'					 = $Gateway.CommunicationPort
+				'AemEnabled'							 = $Gateway.AemEnabled
+				'Last Modified'						     = $Gateway.LastModified.ToString().Trim()
+				'Installed On'						     = $Gateway.InstallTime.ToString().Trim()
+				'Primary Management Server'			     = $Gateway.GetPrimaryManagementServer().DisplayName
+				'Failover Management Servers'		     = $Gateway.GetFailoverManagementServers().DisplayName
 				'Auto Approve Manually Installed Agents' = $Gateway.AutoApproveManuallyInstalledAgents.Value
-				'Reject Manually Installed Agents' = $Gateway.RejectManuallyInstalledAgents.Value
+				'Reject Manually Installed Agents'	     = $Gateway.RejectManuallyInstalledAgents.Value
 			}
 		}
 		$gwinfo | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
@@ -1861,7 +1984,7 @@ public class OpsMgrSetupRegKey{
 				try
 				{
 					Invoke-Command -ComputerName $ms -ErrorAction Stop -ScriptBlock {
-						$pingoutput = @()
+						$dataoutput = @()
 						try
 						{
 							$test = @()
@@ -2009,7 +2132,7 @@ public class OpsMgrSetupRegKey{
 	ForEach ($monitor in $mgfunctions)
 	{
 		$data = $null
-		$data = (Get-SCOMClass -DisplayName $monitor | Get-SCOMClassInstance) | Where { $_.FullName -ne 'Microsoft.SystemCenter.ManagementServicePoolWatchersGroup' }
+		$data = (Get-SCOMClass -DisplayName $monitor | Get-SCOMClassInstance) | Where-Object { $_.FullName -ne 'Microsoft.SystemCenter.ManagementServicePoolWatchersGroup' }
 		$bRow = $btable.NewRow()
 		$bRow.DisplayName = $data.DisplayName
 		$bRow.HealthState = ($data.HealthState).ToString().Replace("Success", "Healthy")
@@ -2075,7 +2198,7 @@ public class OpsMgrSetupRegKey{
 	{
 		$mgOverviewImport = Import-Csv "$OutputPath`\MG_Overview.csv"
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 95%" -PercentComplete 95
-		$mgOverviewImport | % {
+		$mgOverviewImport | ForEach-Object {
 			$MGName = $_.MG_Name
 			$MSCount = $_.MS_Count
 			$GWCount = $_.GW_Count
@@ -2085,6 +2208,7 @@ public class OpsMgrSetupRegKey{
 			$NetworkDeviceCount = $_.NetworkDevice_Count
 			$NoteUpdate = [pscustomobject]@{ }
 			$NoteUpdate | Add-Member -MemberType NoteProperty -Name "Management Group Name" -Value $MGName -ErrorAction SilentlyContinue
+			$NoteUpdate | Add-Member -MemberType NoteProperty -Name "Management Server Count" -Value $MSCount -ErrorAction SilentlyContinue
 			$NoteUpdate | Add-Member -MemberType NoteProperty -Name "Gateway Count" -Value $GWCount -ErrorAction SilentlyContinue
 			$NoteUpdate | Add-Member -MemberType NoteProperty -Name "Agent Count" -Value $AgentCount -ErrorAction SilentlyContinue
 			$NoteUpdate | Add-Member -MemberType NoteProperty -Name "Agent Pending" -Value $AgentPending -ErrorAction SilentlyContinue
@@ -2103,7 +2227,7 @@ public class OpsMgrSetupRegKey{
 		$msg = $e.Message
 		
 		Write-Verbose "Caught Exception: $($error[0]) at line: $line"
-		"$(Time-Stamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
+		"$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
 	}
 	
 	"Environment:" | Out-File -FilePath "$OutputPath\note.txt" -Append
@@ -2111,7 +2235,7 @@ public class OpsMgrSetupRegKey{
 	$NoteUpdate | Add-Member -MemberType NoteProperty -Name "SCOM Version" -Value '<Type in Manually>' -ErrorAction SilentlyContinue
 	$NoteUpdate | Add-Member -MemberType NoteProperty -Name "MS Server OS Version" -Value $((Get-CimInstance win32_operatingsystem).Caption) -ErrorAction SilentlyContinue
 	$NoteUpdate | Add-Member -MemberType NoteProperty -Name "Number of MS" -Value $MSCount -ErrorAction SilentlyContinue
-	$NoteUpdate | Add-Member -MemberType NoteProperty -Name "SQL Info" -Value ($dbOutput | fl * | Out-String -Width 4096) -ErrorAction SilentlyContinue
+	$NoteUpdate | Add-Member -MemberType NoteProperty -Name "SQL Info" -Value ($dbOutput | Format-List * | Out-String -Width 4096) -ErrorAction SilentlyContinue
 	$NoteUpdate | Format-List * | Out-File -FilePath "$OutputPath\note.txt" -Append -Width 4096
 	
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 96%" -PercentComplete 96

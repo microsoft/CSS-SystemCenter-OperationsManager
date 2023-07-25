@@ -1,11 +1,11 @@
-function Get-InstalledSoftware
+function Invoke-GetInstalledSoftware
 {
 	param
 	(
 		[Parameter(Position = 0)]
 		[string[]]$Servers = $env:COMPUTERNAME
 	)
-	function Inner-InstalledSoftware
+	function Invoke-InnerInstalledSoftware
 	{
 		# Add additional property InstallDateObj that will hold the parsed DateTime object
 		$Installed_Software = @()
@@ -32,7 +32,7 @@ function Get-InstalledSoftware
 			})
 		#>
 		$Installed_recently = @()
-		$Installed_recently = $Installed_Software | Where { ($_.DisplayName -ne $null) } # -or ($(try{($TheDate - $_.InstallDateObj).Days -le $Days}catch{$Test = $true}))) }
+		$Installed_recently = $Installed_Software | Where-Object { ($null -ne $_.DisplayName) } # -or ($(try{($TheDate - $_.InstallDateObj).Days -le $Days}catch{$Test = $true}))) }
 		$array = @()
 		if ($Installed_recently.Count -gt 0)
 		{
@@ -44,7 +44,7 @@ function Get-InstalledSoftware
 					'Software Version'   = $software.DisplayVersion;
 					'Publisher'		     = $software.Publisher;
 					'Install Date'	     = $(try { [Datetime]::ParseExact($software.InstallDate, 'yyyyMMdd', $null) | Get-Date -UFormat "%m/%d/%Y" }
-						catch { })
+						catch { Write-Verbose "Unable to determine Install Date" })
 					Architecture		 = $software.Architecture;
 					ComputerName		 = $env:COMPUTERNAME
 				}
@@ -64,21 +64,21 @@ function Get-InstalledSoftware
 		return $array
 	}
 	$finalout = @()
-	Write-Host "  Running the Function to gather Installed Software on:`n" -NoNewline -ForegroundColor Gray
+	Write-Console "  Running the Function to gather Installed Software on:`n" -NoNewline -ForegroundColor Gray
 	foreach ($server in $Servers)
 	{
-		Write-Host "    $server" -NoNewline -ForegroundColor Cyan
+		Write-Console "    $server" -NoNewline -ForegroundColor Cyan
 		if ($server -match $env:COMPUTERNAME)
 		{
-			Write-Host '-' -NoNewline -ForegroundColor Green
-			$finalout += Inner-InstalledSoftware
-			Write-Host "> Completed!`n" -NoNewline -ForegroundColor Green
+			Write-Console '-' -NoNewline -ForegroundColor Green
+			$finalout += Invoke-InnerInstalledSoftware
+			Write-Console "> Completed!`n" -NoNewline -ForegroundColor Green
 		}
 		else
 		{
-			$finalout += Invoke-Command -ComputerName $server -ScriptBlock ${Function:Inner-InstalledSoftware}
-			Write-Host '-' -NoNewline -ForegroundColor Green
-			Write-Host "> Completed!`n" -NoNewline -ForegroundColor Green
+			$finalout += Invoke-Command -ComputerName $server -ScriptBlock ${Function:Invoke-InnerInstalledSoftware}
+			Write-Console '-' -NoNewline -ForegroundColor Green
+			Write-Console "> Completed!`n" -NoNewline -ForegroundColor Green
 		}
 	}
 	return $finalout | Select-Object 'Installed Software', 'Software Version', 'Publisher', 'Install Date', 'Architecture', 'ComputerName' | Sort-Object -Property @{ Expression = 'ComputerName'; Descending = $false }, @{ Expression = 'Install Date'; Descending = $false }, @{ Expression = 'Software Version'; Descending = $true }

@@ -13,8 +13,8 @@ function Get-SCOMNotificationSubscriptionDetails
 	$subs = $null
 	$subs = Get-SCOMNotificationSubscription | Sort-Object
 	$subcount = 0
-	Write-Host "  Gathering Notification Subscription Details from " -ForegroundColor Gray -NoNewline
-    Write-Host $env:COMPUTERNAME -ForegroundColor Cyan
+	Write-Console "  Gathering Notification Subscription Details from " -ForegroundColor Gray -NoNewline
+	Write-Console $env:COMPUTERNAME -ForegroundColor Cyan
 	foreach ($sub in $subs)
 	{
 		$subcount = $subcount
@@ -104,11 +104,11 @@ function Get-SCOMNotificationSubscriptionDetails
 		$i = 0
 		$classid = $sub.Configuration.MonitoringClassIds
 		$groupid = $sub.Configuration.MonitoringObjectGroupIds
-		if ($classid -ne $null)
+		if ($null -ne $classid)
 		{
 			$class = Get-SCOMClass -Id $classid
 		}
-		if ($groupid -ne $null)
+		if ($null -ne $groupid)
 		{
 			$Group = Get-SCOMGroup -Id $groupid
 		}
@@ -234,7 +234,7 @@ function Get-SCOMNotificationSubscriptionDetails
 		$finalstring += $MainObject | Out-String -Width 4096
 		
 	}
-	if($OutputFile)
+	if ($OutputFile)
 	{
 		$finalstring | Out-File $OutputFile
 	}

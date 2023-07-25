@@ -15,18 +15,73 @@ function Get-LocalUserAccountsRights
 		$msg = $e.Message
 		
 		Write-Verbose "Caught Exception: $e :: Message: $msg :: at line: $line"
-		"$(Time-Stamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
+		"$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
 	}
 	if (!$Servers)
 	{
 		$Servers = $env:COMPUTERNAME
 	}
-	
+	function Write-Console
+	{
+		param
+		(
+			[Parameter(Position = 1)]
+			[string]$Text,
+			[Parameter(Position = 2)]
+			$ForegroundColor,
+			[Parameter(Position = 3)]
+			[switch]$NoNewLine
+		)
+		
+		if ([Environment]::UserInteractive)
+		{
+			if ($ForegroundColor)
+			{
+				Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+			}
+			else
+			{
+				Write-Host $Text -NoNewLine:$NoNewLine
+			}
+		}
+		else
+		{
+			Write-Output $Text
+		}
+	}
 	function Inner-LocalAdministrators
 	{
+		function Write-Console
+		{
+			param
+			(
+				[Parameter(Position = 1)]
+				[string]$Text,
+				[Parameter(Position = 2)]
+				$ForegroundColor,
+				[Parameter(Position = 3)]
+				[switch]$NoNewLine
+			)
+			
+			if ([Environment]::UserInteractive)
+			{
+				if ($ForegroundColor)
+				{
+					Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+				}
+				else
+				{
+					Write-Host $Text -NoNewLine:$NoNewLine
+				}
+			}
+			else
+			{
+				Write-Output $Text
+			}
+		}
 		$members = net localgroup administrators |
-		where { $_ -AND $_ -notmatch "command completed successfully" } |
-		select -skip 4
+		Where-Object { $_ -AND $_ -notmatch "command completed successfully" } |
+		Select-Object -skip 4
 		
 		$dtable = New-Object System.Data.DataTable
 		$dtable.Columns.Add("ComputerName", "System.String") | Out-Null
@@ -35,7 +90,7 @@ function Get-LocalUserAccountsRights
 		
 		foreach ($member in $members)
 		{
-			Write-Host "-" -ForegroundColor DarkCyan -NoNewline
+			Write-Console "-" -ForegroundColor DarkCyan -NoNewline
 			$nRow = $dtable.NewRow()
 			$nRow.ComputerName = $env:COMPUTERNAME
 			$nRow.Group = "Administrators"
@@ -45,33 +100,61 @@ function Get-LocalUserAccountsRights
 		}
 		return $dtable
 	}
-	Write-Host "  Gathering Local Administrators:" -ForegroundColor DarkCyan
+	Write-Console "  Gathering Local Administrators:" -ForegroundColor DarkCyan
 	$localadmin = @()
 	$localAdministratorsScriptBlock = (get-item Function:Inner-LocalAdministrators).ScriptBlock
 	foreach ($Server in $Servers)
 	{
-		Write-Host "   $Server" -ForegroundColor Cyan -NoNewline
+		Write-Console "   $Server" -ForegroundColor Cyan -NoNewline
 		if ($Server -match $env:COMPUTERNAME)
 		{
-			Write-Host "-" -ForegroundColor DarkCyan -NoNewline
+			Write-Console "-" -ForegroundColor DarkCyan -NoNewline
 			$localadmin += Inner-LocalAdministrators
 		}
 		else
 		{
-			Write-Host "-" -ForegroundColor DarkCyan -NoNewline
-			$localadmin += Invoke-Command -ComputerName $Server -ScriptBlock $localAdministratorsScriptBlock -HideComputerName | Select * -ExcludeProperty RunspaceID, PSShowComputerName, PSComputerName | Sort-Object -Property @{ Expression = "ComputerName"; Descending = $False }, @{ Expression = "Members"; Descending = $False }
+			Write-Console "-" -ForegroundColor DarkCyan -NoNewline
+			$localadmin += Invoke-Command -ComputerName $Server -ScriptBlock $localAdministratorsScriptBlock -HideComputerName | Select-Object * -ExcludeProperty RunspaceID, PSShowComputerName, PSComputerName | Sort-Object -Property @{ Expression = "ComputerName"; Descending = $False }, @{ Expression = "Members"; Descending = $False }
 		}
-		Write-Host "> " -ForegroundColor DarkCyan -NoNewline
-		Write-Host 'Complete!' -ForegroundColor Green
+		Write-Console "> " -ForegroundColor DarkCyan -NoNewline
+		Write-Console 'Complete!' -ForegroundColor Green
 	}
-	Write-Host " "
+	Write-Console " "
 	New-Item -ItemType Directory -Path "$OutputPath\Local Administrators Group" -Force -ErrorAction Stop | Out-Null
 	$localadmin | Export-CSV $OutputPath\Server_LocalAdministratorsGroup.csv -NoTypeInformation
 	$localadmin | Out-String -Width 4096 | Out-File "$OutputPath\Local Administrators Group\LocalAdministratorsGroup.txt"
-	Write-Host "  Gathering Local User Rights Assignment:" -ForegroundColor DarkCyan
+	Write-Console "  Gathering Local User Rights Assignment:" -ForegroundColor DarkCyan
 	$localrights = @()
-	function Inner-UserSecurityRights
+	function Invoke-InnerUserSecurityRights
 	{
+		function Write-Console
+		{
+			param
+			(
+				[Parameter(Position = 1)]
+				[string]$Text,
+				[Parameter(Position = 2)]
+				$ForegroundColor,
+				[Parameter(Position = 3)]
+				[switch]$NoNewLine
+			)
+			
+			if ([Environment]::UserInteractive)
+			{
+				if ($ForegroundColor)
+				{
+					Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+				}
+				else
+				{
+					Write-Host $Text -NoNewLine:$NoNewLine
+				}
+			}
+			else
+			{
+				Write-Output $Text
+			}
+		}
 		# The better version of this function is located here: https://github.com/blakedrumm/SCOM-Scripts-and-SQL/blob/master/Powershell/General%20Functions/Get-UserRights.ps1
 		# Full blog post here: https://blakedrumm.com/blog/set-and-check-user-rights-assignment/
 		function Get-SecurityPolicy
@@ -183,7 +266,7 @@ public static extern bool LookupPrivilegeDisplayName(
 				$dtable.Columns.Add("Principal", "System.String") | Out-Null
 				$dtable.Columns.Add("ComputerName", "System.String") | Out-Null
 				Select-String '^(Se\S+) = (\S+)' $TemplateFilename | Foreach-Object {
-					Write-Host "-" -ForegroundColor DarkCyan -NoNewline
+					Write-Console "-" -ForegroundColor DarkCyan -NoNewline
 					$Privilege = $_.Matches[0].Groups[1].Value
 					$Principals = $_.Matches[0].Groups[2].Value -split ','
 					foreach ($Principal in $Principals)
@@ -209,22 +292,22 @@ public static extern bool LookupPrivilegeDisplayName(
 		}
 		return Get-SecurityPolicy
 	}
-	$localUserSecurityRightsScriptBlock = (get-item Function:Inner-UserSecurityRights).ScriptBlock
+	$localUserSecurityRightsScriptBlock = (get-item Function:Invoke-InnerUserSecurityRights).ScriptBlock
 	foreach ($Server in $Servers)
 	{
-		Write-Host "   $Server" -ForegroundColor Cyan -NoNewline
+		Write-Console "   $Server" -ForegroundColor Cyan -NoNewline
 		if ($Server -match "^$env:COMPUTERNAME")
 		{
-			Write-Host "-" -ForegroundColor DarkCyan -NoNewline
-			$localrights += Inner-UserSecurityRights
+			Write-Console "-" -ForegroundColor DarkCyan -NoNewline
+			$localrights += Invoke-InnerUserSecurityRights
 		}
 		else
 		{
-			Write-Host "-" -ForegroundColor DarkCyan -NoNewline
-			$localrights += Invoke-Command -ComputerName $Server -ScriptBlock $localUserSecurityRightsScriptBlock -HideComputerName | Select * -ExcludeProperty RunspaceID, PSShowComputerName, PSComputerName -Unique
+			Write-Console "-" -ForegroundColor DarkCyan -NoNewline
+			$localrights += Invoke-Command -ComputerName $Server -ScriptBlock $localUserSecurityRightsScriptBlock -HideComputerName | Select-Object * -ExcludeProperty RunspaceID, PSShowComputerName, PSComputerName -Unique
 		}
-		Write-Host "> " -ForegroundColor DarkCyan -NoNewline
-		Write-Host 'Complete!' -ForegroundColor Green
+		Write-Console "> " -ForegroundColor DarkCyan -NoNewline
+		Write-Console 'Complete!' -ForegroundColor Green
 	}
 	New-Item -ItemType Directory -Path "$OutputPath\Local User Rights" -Force -ErrorAction Stop | Out-Null
 	# Export CSV

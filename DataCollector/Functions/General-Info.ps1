@@ -1,6 +1,6 @@
 function Get-SCOMGeneralInfo
 {
-	#Last modified: June 20th, 2023
+	#Last modified: November 8th, 2023
 	param
 	(
 		[cmdletbinding()]
@@ -673,7 +673,27 @@ public class OpsMgrSetupRegKey{
 						"$(Invoke-TimeStamp)Caught Exception: $($error[0]) at line: $line" | Out-File $OutputPath\Error.log -Append
 					}
 				}
-				
+				# Check if the OperationsManager module is imported
+				$moduleName = "OperationsManager"
+				$module = Get-Module -Name $moduleName -ListAvailable -ErrorAction SilentlyContinue
+
+				if ($module) {
+					# The module exists, check if it is imported
+					if (-not (Get-Module -Name $moduleName -ErrorAction SilentlyContinue)) {
+						# The module is not imported, import it
+						try {
+							Import-Module -Name $moduleName -ErrorAction Stop
+							Write-Verbose "$moduleName module imported successfully."
+						} catch {
+							Write-Verbose "Failed to import the $moduleName module. Error: $_"
+						}
+					} else {
+						Write-Verbose "$moduleName module is already imported."
+					}
+				} else {
+					Write-Verbose "The $moduleName module is not installed."
+				}
+
 				$CurrentVersionFinal = $CurrentVersionSwitch + " (" + $setuplocation.CurrentVersion + ")"
 				
 				
@@ -980,7 +1000,7 @@ public class OpsMgrSetupRegKey{
 							24{ 'FB-DIMM' }
 							default { 'Unknown' }
 						})"
-					"     Memory Speed: $(if ($memory.ConfiguredClockSpeed) { $memory.ConfiguredClockSpeed + 'MHz' }
+					"     Memory Speed: $(if ($memory.ConfiguredClockSpeed) { "$($memory.ConfiguredClockSpeed)MHz" }
 						else { 'Unknown' })"
 					" "
 					return
@@ -1063,10 +1083,12 @@ public class OpsMgrSetupRegKey{
 			if ($ACS)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'ACS Collector' -Value 'True'
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'ACS Collector' -Value 'True'
 			}
 			else
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'ACS Collector' -Value 'False'
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'ACS Collector' -Value 'False'
 			}
 			if ($SCOMAgentVersion)
 			{
@@ -1147,11 +1169,15 @@ public class OpsMgrSetupRegKey{
 			if ($ADIntegrationSwitch)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'AD Integration' -Value $ADIntegrationSwitch
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'AD Integration' -Value $ADIntegrationSwitch
 			}
 			
 			if ($setuplocation)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Installation Directory' -Value $setuplocation.InstallDirectory
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Installation Directory' -Value $setuplocation.InstallDirectory
 			}
 			if ($MGDetails)
 			{
@@ -1164,23 +1190,33 @@ public class OpsMgrSetupRegKey{
 			elseif ($ManagementGroup)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name '(Management Server) Management Group Name' -Value $ManagementGroup
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name '(Management Server) Management Group Name' -Value $ManagementGroup
 			}
 			if ($ManagementServers)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Management Servers in Management Group' -Value (($ManagementServers | Sort-Object) -join ", ")
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Management Servers in Management Group' -Value (($ManagementServers | Sort-Object) -join ", ")
 			}
 			if ($OMSList)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Agent OMS Workspaces' -Value $OMSList
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Agent OMS Workspaces' -Value $OMSList
 			}
 			if ($ProxyURL)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Proxy URL' -Value $ProxyURL
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Proxy URL' -Value $ProxyURL
 			}
 			
 			if ($rmsEmulator)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Remote Management Server Emulator (Primary Server)' -Value "$rmsEmulator"
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Remote Management Server Emulator (Primary Server)' -Value "$rmsEmulator"
 			}
 			if ($Freespace)
 			{
@@ -1194,10 +1230,14 @@ public class OpsMgrSetupRegKey{
 			if ($CertLoaded)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Certificate Loaded' -Value $CertLoaded
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Certificate Loaded' -Value $CertLoaded
 			}
 			else
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Certificate Loaded' -Value 'Unable to detect any certificate in registry.'
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Certificate Loaded' -Value 'Unable to detect any certificate in registry.'
 			}
 			if ($winrmConfig)
 			{
@@ -1207,7 +1247,12 @@ public class OpsMgrSetupRegKey{
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'WinRM Configuration' -Value "Unable to gather Configuration."
 			}
-			$setupOutput | Add-Member -MemberType NoteProperty -Name 'TLS 1.2 Enforced' -Value $TLS12Enforced
+			if ($TLS12Enforced)
+			{
+				$setupOutput | Add-Member -MemberType NoteProperty -Name 'TLS 1.2 Enforced' -Value $TLS12Enforced
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'TLS 1.2 Enforced' -Value $TLS12Enforced
+			}
 			$setupOutput | Add-Member -MemberType NoteProperty -Name 'Powershell Version' -Value $PSVersion
 			# SCOM Version
 			$scomVersion  | Add-Member -MemberType NoteProperty -Name 'Powershell Version' -Value $PSVersion
@@ -1232,6 +1277,8 @@ public class OpsMgrSetupRegKey{
 			if ($configUpdated)
 			{
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Last Time Configuration Updated (File: ..\OpsMgrConnector.Config.xml)' -Value $($configUpdated | Format-Table -AutoSize | Out-String -Width 4096)
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Last Time Configuration Updated (File: ..\OpsMgrConnector.Config.xml)' -Value $($configUpdated | Format-Table -AutoSize | Out-String -Width 4096)
 			}
 			if ($LastUpdatedConfiguration)
 			{
@@ -1248,6 +1295,8 @@ public class OpsMgrSetupRegKey{
 				try { $UseMIAPI = (Get-Item 'HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup\UseMIAPI' -ErrorAction Stop | Select-Object Name, Property).Property | Out-String } # https://docs.microsoft.com/en-us/system-center/scom/whats-new-in-om?view=sc-om-2019#scalability-improvement-with-unix-or-linux-agent-monitoring
 				catch [System.Management.Automation.RuntimeException]{ $UseMIAPI = 'Not Set (or Unknown)' }
 				$setupOutput | Add-Member -MemberType NoteProperty -Name 'UseMIAPI Registry' -Value $UseMIAPI
+				# SCOM Version
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'UseMIAPI Registry' -Value $UseMIAPI
 			}
 			try
 			{
@@ -1268,6 +1317,8 @@ $setupOutputRemote += @"
 					$ReportingProductVersionSwitch = (Get-ProductVersion -Product SCOM -BuildVersion $ReportingDLL)
 					$ReportingInfo = $ReportingProductVersionSwitch + " (" + $ReportingDLL + ")"
 					$setupOutput | Add-Member -MemberType NoteProperty -Name 'Reporting Services Version (DLL: ..\Reporting\Tools\TMF\OMTraceTMFVer.dll)' -Value $ReportingInfo
+					# SCOM Version
+					$scomVersion | Add-Member -MemberType NoteProperty -Name 'Reporting Services Version (DLL: ..\Reporting\Tools\TMF\OMTraceTMFVer.dll)' -Value $ReportingInfo
 					try
 					{
 						
@@ -1377,7 +1428,7 @@ $setupOutputRemote += @"
 			} | Sort-Object ServiceName | Export-Csv "$OutputPath`\OS_Services.csv" -NoTypeInformation -Append
 			$GeneralInfoGather = Invoke-InnerGeneralInfoFunction -LocalManagementServer
 			$ManagementServerDetails = $GeneralInfoGather | Select-Object -Index 1
-			$ManagementServerDetails | Out-File "$OutputPath`\MS_Information.txt" -Append
+			$ManagementServerDetails | Out-File "$OutputPath`\MS_Information.txt" -Append -Width 4096
 			#$ManagementServerDetails | Export-Csv "$OutputPath`\MS_Information.csv" -NoTypeInformation -Append
 			@"
 ======================================
@@ -1410,7 +1461,7 @@ $setupOutputRemote += @"
 				
 			}
 			$ManagementServerDetails = $GeneralInfoGather | Select-Object -Index 1
-			$ManagementServerDetails | Select-Object * -ExcludeProperty PSComputerName, RunspaceId | Out-File "$OutputPath`\MS_Information.txt" -Append
+			$ManagementServerDetails | Select-Object * -ExcludeProperty PSComputerName, RunspaceId | Out-File "$OutputPath`\MS_Information.txt" -Append -Width 4096
 			#$ManagementServerDetails | Export-Csv "$OutputPath`\MS_Information.csv" -NoTypeInformation -Append
 			$ServicesList = (Get-CimInstance Win32_service -ComputerName $server).where{ $_.name -eq 'omsdk' -or $_.name -eq 'cshost' -or $_.name -eq 'HealthService' -or $_.name -eq 'System Center Management APM' -or $_.name -eq 'AdtAgent' -or $_.name -match "MSSQL" -or $_.name -like "SQLAgent*" -or $_.name -eq 'SQLBrowser' -or $_.name -eq 'SQLServerReportingServices' }
 			$ServicesList | ForEach-Object {
@@ -1911,8 +1962,8 @@ public class OpsMgrSetupRegKey{
 =------- Latency Check --------=
 ================================
 "@ | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
-	$OpsDBServer = $global:OpsDB_SQLServer
-	$DWDBServer = $global:DW_SQLServer
+	$OpsDBServer = $OpsDB_SQLServer
+	$DWDBServer = $DW_SQLServer
 	foreach ($ms in $ManagementServers) #Go Through each Management Server
 	{
 		$pingoutput = @()

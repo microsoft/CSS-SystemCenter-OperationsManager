@@ -9,6 +9,16 @@ Information
 #>
 $ScriptPath = (Get-Location).Path
 $mainscript = Get-Content .\DataCollector.ps1
+
+# Update License year for release data collector script
+$mainscript = $mainscript.Replace("$($mainscript | Select-String -SimpleMatch "Copyright" | Select-Object -First 1)", "Copyright (c) $((Get-Date).Year) Blake Drumm")
+
+# Update License year for Main Data Collector script
+(Get-Content "$ScriptPath\DataCollector.ps1").Replace("$(Get-Content .\DataCollector.ps1 | Select-String -SimpleMatch "Copyright" | Select-Object -First 1)", "Copyright (c) $((Get-Date).Year) Blake Drumm") | Set-Content "$ScriptPath\DataCollector.ps1" -Force
+
+# Update License year for Readme.md file
+(Get-Content "$ScriptPath\Readme.md").Replace("$(Get-Content "$ScriptPath\Readme.md" | Select-String "Copyright" | Select-Object -First 1)", "Copyright (c) $((Get-Date).Year) Blake Drumm") | Set-Content "$ScriptPath\Readme.md"
+
 $ScriptFunctions = Get-ChildItem .\Functions | Where-Object{ $_ -like '*.ps1' } | Select-Object FullName -ExpandProperty FullName
 # Main Script Functions
 foreach ($script in $ScriptFunctions)
@@ -52,14 +62,5 @@ $mainscript = ($mainscript).Replace('. $ScriptPath`\Script-Auto-Updater.ps1', (G
 $mainscript = ($mainscript).Replace('$global:','$script:')
 # Update version
 $version = Get-Item .\v* | Select-Object Name -ExpandProperty Name
-
-# Update License year for release data collector script
-$mainscript = $mainscript.Replace("$($mainscript | Select-String -SimpleMatch "Copyright" | Select-Object -First 1)", "Copyright (c) $((Get-Date).Year) Blake Drumm")
-
-# Update License year for Main Data Collector script
-(Get-Content "$ScriptPath\DataCollector.ps1").Replace("$(Get-Content .\DataCollector.ps1 | Select-String -SimpleMatch "Copyright" | Select-Object -First 1)", "Copyright (c) $((Get-Date).Year) Blake Drumm") | Set-Content "$ScriptPath\DataCollector.ps1" -Force
-
-# Update License year for Readme.md file
-(Get-Content "$ScriptPath\Readme.md").Replace("$(Get-Content "$ScriptPath\Readme.md" | Select-String "Copyright" | Select-Object -First 1)", "Copyright (c) 2022 Blake Drumm") | Set-Content "$ScriptPath\Readme.md"
 
 $mainscript | Set-Content ".\DataCollector-$version.ps1" -Force

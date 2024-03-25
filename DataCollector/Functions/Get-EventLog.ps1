@@ -16,6 +16,36 @@ Function Get-SCOMEventLogs
 		Write-Verbose "Caught Exception: $e :: Message: $msg :: at line: $line"
 		"$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line" | Out-File $OutputPath\Error.log -Append
 	}
+	Function Invoke-TimeStamp
+	{
+		$TimeStamp = Get-Date -Format "MM/dd/yyyy hh:mm:ss tt"
+		return "$TimeStamp - "
+	}
+	function Write-Console
+	{
+		param
+		(
+			[string]$Text,
+			$ForegroundColor,
+			[switch]$NoNewLine
+		)
+		
+		if ([Environment]::UserInteractive)
+		{
+			if ($ForegroundColor)
+			{
+				Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+			}
+			else
+			{
+				Write-Host $Text -NoNewLine:$NoNewLine
+			}
+		}
+		else
+		{
+			Write-Output $Text
+		}
+	}
 	foreach ($server in $servers)
 	{
 		Write-Output " "
@@ -77,113 +107,110 @@ Function Get-SCOMEventLogs
 			else
 			{
 				# If not the Computer Running this Script, do the below.
-				$eventlog_ispresent = Get-EventLog -LogName * -ComputerName $server | Where-Object { $_.Log -eq $log }
-				if ($eventlog_ispresent)
+				#$eventlog_ispresent = Get-EventLog -LogName * -ComputerName $server | Where-Object { $_.Log -eq $log }
+				Write-Console "    Remotely " -NoNewline -ForegroundColor DarkCyan
+				Write-Console "Exporting Event Log " -NoNewline -ForegroundColor Cyan
+				Write-Console "on " -NoNewline -ForegroundColor DarkCyan
+				Write-Console "$server " -NoNewline -ForegroundColor Cyan
+				Write-Console ": " -NoNewline -ForegroundColor DarkCyan
+				Write-Console "$log" -NoNewline -ForegroundColor Cyan
+				Write-Console "-" -NoNewline -ForegroundColor Green
+				try
 				{
-					Write-Console "    Remotely " -NoNewline -ForegroundColor DarkCyan
-					Write-Console "Exporting Event Log " -NoNewline -ForegroundColor Cyan
-					Write-Console "on " -NoNewline -ForegroundColor DarkCyan
-					Write-Console "$server " -NoNewline -ForegroundColor Cyan
-					Write-Console ": " -NoNewline -ForegroundColor DarkCyan
-					Write-Console "$log" -NoNewline -ForegroundColor Cyan
 					Write-Console "-" -NoNewline -ForegroundColor Green
-					try
-					{
-						Write-Console "-" -NoNewline -ForegroundColor Green
-						Invoke-Command -ComputerName $server {
+					Invoke-Command -ComputerName $server {
+						
+						function Write-Console
+						{
+							param
+							(
+								[Parameter(Position = 1)]
+								[string]$Text,
+								[Parameter(Position = 2)]
+								$BackgroundColor,
+								[Parameter(Position = 3)]
+								$ForegroundColor,
+								[Parameter(Position = 4)]
+								[switch]$NoNewLine
+							)
 							
-                            function Write-Console
-                            {
-	                            param
-	                            (
-		                            [Parameter(Position = 1)]
-		                            [string]$Text,
-		                            [Parameter(Position = 2)]
-		                            $BackgroundColor,
-		                            [Parameter(Position = 3)]
-		                            $ForegroundColor,
-		                            [Parameter(Position = 4)]
-		                            [switch]$NoNewLine
-	                            )
-	
-	                            if ([Environment]::UserInteractive)
-	                            {
-                                    if ($ForegroundColor)
-                                    {
-                                        if ($BackgroundColor)
-                                        {
-                                            Write-Host $Text -BackgroundColor $BackgroundColor -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
-                                        }
-                                        else
-                                        {
-                                            Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
-                                        }
-                                    }
-                                    else
-                                    {
-		                                Write-Host $Text -NoNewLine:$NoNewLine
-                                    }
-	                            }
-	                            else
-	                            {
-		                            Write-Output $Text
-	                            }
-                            }
-							$localAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
-							if ($localadmin) { $LA = "$true" }
-							else { $LA = "$false" }
-							
-							
-							$fileCheck = Test-Path "c:\windows\Temp\$using:server.$using:log.evtx"
-							if ($fileCheck -eq $true)
+							if ([Environment]::UserInteractive)
 							{
-								Remove-Item "c:\windows\Temp\$using:server.$using:log.evtx" -Force
-							}
-							if ($la -eq $true)
-							{
-								try
+								if ($ForegroundColor)
 								{
-									$eventcollect = wevtutil epl $using:originalLogName "c:\windows\Temp\$using:server.$using:log.evtx"; wevtutil al "c:\windows\Temp\$using:server.$using:log.evtx"
+									if ($BackgroundColor)
+									{
+										Write-Host $Text -BackgroundColor $BackgroundColor -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+									}
+									else
+									{
+										Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+									}
 								}
-								catch
+								else
 								{
-									Write-Warning $_
-									continue
+									Write-Host $Text -NoNewLine:$NoNewLine
 								}
 							}
-							continue
+							else
+							{
+								Write-Output $Text
+							}
 						}
-						Write-Console "> Collected Events" -NoNewline -ForegroundColor Green
-						Write-Output " "
-					}
-					catch { Write-Warning $_ }
-					try
-					{
-						Write-Console "     Transferring using Move-Item" -NoNewLine -ForegroundColor DarkCyan
-						$moveevents = Move-Item "\\$server\c$\windows\temp\$server.$log.evtx" $ScriptPath\output -force -ErrorAction Stop; Move-Item "\\$server\c$\windows\temp\localemetadata\*.mta" $ScriptPath\output -force -ErrorAction Stop
-						Write-Console "-" -NoNewline -ForegroundColor Green
-						do { Write-Console "-" -NoNewline -ForegroundColor Green; Start-Sleep 1 }
-						while ($moveevents)
-						Write-Console "> Transfer Completed!" -NoNewline -ForegroundColor Green
-						Write-Output " "
+						$localAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+						if ($localadmin) { $LA = "$true" }
+						else { $LA = "$false" }
+						
+						
+						$fileCheck = Test-Path "c:\windows\Temp\$using:server.$using:log.evtx"
+						if ($fileCheck -eq $true)
+						{
+							Remove-Item "c:\windows\Temp\$using:server.$using:log.evtx" -Force
+						}
+						if ($la -eq $true)
+						{
+							try
+							{
+								$eventcollect = wevtutil epl $using:originalLogName "c:\windows\Temp\$using:server.$using:log.evtx"; wevtutil al "c:\windows\Temp\$using:server.$using:log.evtx"
+							}
+							catch
+							{
+								Write-Warning $_
+								continue
+							}
+						}
 						continue
 					}
-					catch
-					{
-						Write-Warning $_
-					}
-					try
-					{
-						Write-Console "     Transferring using Robocopy" -NoNewline -ForegroundColor DarkCyan
-						Robocopy "\\$server\c$\windows\temp" "$ScriptPath\output" "$server.$log.evtx" /MOVE /R:2 /W:10 | Out-Null
-						Robocopy "\\$server\c$\windows\temp\localemetadata" "$ScriptPath\output" "*.MTA" /MOVE /R:2 /W:10 | Out-Null
-						Write-Console "      Transfer Completed!" -NoNewline -ForegroundColor Green
-						continue
-					}
-					catch
-					{
-						Write-Warning $_
-					}
+					Write-Console "> Collected Events" -NoNewline -ForegroundColor Green
+					Write-Output " "
+				}
+				catch { Write-Warning $_ }
+				try
+				{
+					Write-Console "     Transferring using Move-Item" -NoNewLine -ForegroundColor DarkCyan
+					$moveevents = Move-Item "\\$server\c$\windows\temp\$server.$log.evtx" $ScriptPath\output -force -ErrorAction Stop; Move-Item "\\$server\c$\windows\temp\localemetadata\*.mta" $ScriptPath\output -force -ErrorAction Stop
+					Write-Console "-" -NoNewline -ForegroundColor Green
+					do { Write-Console "-" -NoNewline -ForegroundColor Green; Start-Sleep 1 }
+					while ($moveevents)
+					Write-Console "> Transfer Completed!" -NoNewline -ForegroundColor Green
+					Write-Output " "
+					continue
+				}
+				catch
+				{
+					Write-Warning $_
+				}
+				try
+				{
+					Write-Console "     Transferring using Robocopy" -NoNewline -ForegroundColor DarkCyan
+					Robocopy "\\$server\c$\windows\temp" "$ScriptPath\output" "$server.$log.evtx" /MOVE /R:2 /W:10 | Out-Null
+					Robocopy "\\$server\c$\windows\temp\localemetadata" "$ScriptPath\output" "*.MTA" /MOVE /R:2 /W:10 | Out-Null
+					Write-Console "      Transfer Completed!" -NoNewline -ForegroundColor Green
+					continue
+				}
+				catch
+				{
+					Write-Warning $_
 				}
 			}
 		}

@@ -14,14 +14,21 @@ function Invoke-AutoUpdater
 				[Parameter(Position = 1)]
 				[string]$Text,
 				[Parameter(Position = 2)]
-				[string]$ForegroundColor,
+				$ForegroundColor,
 				[Parameter(Position = 3)]
 				[switch]$NoNewLine
 			)
 			
 			if ([Environment]::UserInteractive)
 			{
-				Write-Console $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+				if ($ForegroundColor)
+				{
+					Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
+				}
+				else
+				{
+					Write-Host $Text -NoNewLine:$NoNewLine
+				}
 			}
 			else
 			{

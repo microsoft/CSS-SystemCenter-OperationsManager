@@ -659,19 +659,28 @@ Function Invoke-SQLQueries
 				}
 				catch
 				{
-					Write-Console "       Error running SQL query: $QueryFileName
-$_
-" -ForegroundColor Red
-					$_ | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 					#potential error code
 					#use continue or break keywords
 					$e = $_.Exception
 					$line = $_.InvocationInfo.ScriptLineNumber
 					$msg = $e.Message
 					
+					if ($msg -like "*Invalid object name 'MT_Microsoft`$SystemCenter`$Advisor`$Settings'*") {
+						# Handle the specific error here
+						Write-Console "Unable to gather data from Advisor table due to missing the System Center Advisor Management Packs." -ForegroundColor 
+						"$(Invoke-TimeStamp)Unable to gather data from Advisor table due to missing the System Center Advisor Management Packs." | Out-File $OutputPath\Error.log -Append
+					}
+					else
+					{
+					Write-Console "       Error running SQL query: $QueryFileName
+$_
+" -ForegroundColor Red
+					$_ | Export-Csv -Path "$OutputFileName" -NoTypeInformation
+
 					Write-Verbose "Caught Exception: $e :: Message: $msg :: at line: $line"
 					$details = "$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line"
 					"$(Invoke-TimeStamp)Error running SQL query: $QueryFileName `n$details" | Out-File $OutputPath\Error.log -Append
+					}
 				}
 				
 			}

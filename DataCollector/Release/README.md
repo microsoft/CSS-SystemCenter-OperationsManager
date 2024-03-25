@@ -26,7 +26,7 @@
 2. Open an Powershell shell __as Adminstrator__ and change to the directory the SCOM Data Collector Powershell Script is located, such as:
    ```powershell
    cd C:\Data Collector
-   .\DataCollector-v3.8.19.ps1
+   .\DataCollector-v4.0.0.ps1
    ```
 
  >### Optional
@@ -80,7 +80,7 @@ This script has the ability to gather the following information:
 Every Switch Available:
 
 ```powershell
-.\DataCollector.ps1 -All -ManagementServers "<array>" -Servers "<array>" -AdditionalEventLogs "<array>" -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipSQLQueries -SQLOnly -SQLOnlyOpsDB -SQLOnlyDW
+.\DataCollector.ps1 -All -ManagementServers "<array>" -Servers "<array>" -AdditionalEventLogs "<array>" -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipSQLQueries -SQLOnly -SQLOnlyOpsDB -SQLOnlyDW -BuildPipeline -CaseNumber "<string>" -ExportSCXCertificates -ExportMSCertificates -GenerateHTML -GetNotificationSubscriptions -GetUserRoles -LeastAmount -MSInfo32 -NoSQLPermission -PingAll -SCXAgents "<array>" -SCXUsername "<string>" -SCXMaintenanceUsername "<string>" -SCXMonitoringUsername "<string>" -SkipBestPracticeAnalyzer -SkipConnectivityTests -SkipGeneralInformation -SQLLogs
 ```
 
 
@@ -173,7 +173,7 @@ ___
 
 ## MIT License
 
-Copyright (c) 2022 Blake Drumm
+Copyright (c) 2024 Blake Drumm
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

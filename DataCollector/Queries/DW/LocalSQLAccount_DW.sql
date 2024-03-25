@@ -27,6 +27,9 @@ FOR XML PATH('')
 )
 ,1,1,'') AS Permissions_user
 FROM @DB_Users user1
+WHERE LoginType = 'SQL_USER' and
+UserName != 'dbo (sa)' and
+UserName != 'MS_DataCollectorInternalUser'
 GROUP BY
 dbname,username ,logintype ,create_date ,modify_date
 ORDER BY DBName, username

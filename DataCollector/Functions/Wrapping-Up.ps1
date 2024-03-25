@@ -99,35 +99,35 @@ $EndTime
 	[string]$filedate = (Get-Date).tostring("MM_dd_yyyy_hh-mm-tt")
 	if ($CaseNumber)
 	{
-		[string]$destfilename = "SDC_Results_$CaseNumber_$filedate`.zip"
+		[string]$script:destfilename = "SDC_Results_$CaseNumber_$filedate`.zip"
 	}
 	elseif ($BuildPipeline)
 	{
-		[string]$destfilename = "SDC_Results.zip"
+		[string]$script:destfilename = "SDC_Results.zip"
 	}
 	else
 	{
-		[string]$destfilename = "SDC_Results_$filedate`.zip"
+		[string]$script:destfilename = "SDC_Results_$filedate`.zip"
 	}
 	
-	[string]$destfile = "$ScriptPath\$destfilename"
-	IF (Test-Path $destfile)
+	[string]$script:destfile = "$ScriptPath\$script:destfilename"
+	IF (Test-Path $script:destfile)
 	{
 		#File exists from a previous run on the same day - delete it
-		Write-Console "-Found existing zip file: $destfile.`n Deleting existing file." -ForegroundColor DarkGreen
-		Remove-Item $destfile -Force
+		Write-Console "-Found existing zip file: $script:destfile.`n Deleting existing file." -ForegroundColor DarkGreen
+		Remove-Item $script:destfile -Force
 	}
 	$compressionLevel = [System.IO.Compression.CompressionLevel]::Optimal
 	$includebasedir = $false
-	[System.IO.Compression.ZipFile]::CreateFromDirectory($SourcePath, $destfile, $compressionLevel, $includebasedir) | Out-Null
+	[System.IO.Compression.ZipFile]::CreateFromDirectory($SourcePath, $script:destfile, $compressionLevel, $includebasedir) | Out-Null
 	IF ($Error)
 	{
 		Write-Error "Error creating zip file."
 	}
 	ELSE
 	{
-		Write-Console "-Cleaning up output directory." -ForegroundColor DarkCyan
+		Write-Console "-Saved zip file to: '$script:destfile'" -ForegroundColor Cyan
+		Write-Console "--Cleaning up output directory." -ForegroundColor DarkCyan
 		Remove-Item $OutputPath -Recurse
-		Write-Console "--Saved zip file to: $destfile." -ForegroundColor Cyan
 	}
 }

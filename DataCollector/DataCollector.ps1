@@ -12,7 +12,7 @@
 		Allows you to Specify all the Switches Available for use. (Except: MSInfo32)
 	
 	.PARAMETER AssumeYes
-		This will allow you to not be prompted for anything.
+		This will allow you to not be prompted for anything. (This will not bypass -SCXAgents questions)
 	
 	.PARAMETER BuildPipeline
 		Azure DevOps Build Pipeline switch to output the SDC Results file without any File Date or CaseNumber.
@@ -34,6 +34,12 @@
 	
 	.PARAMETER ExportMPs
 		Export all Sealed/Unsealed MP's.
+	
+	.PARAMETER ExportSCXCertificates
+		Export the Management Server(s) SCX Certificate(s).
+	
+	.PARAMETER ExportMSCertificates
+		Export all Management Server Certificates.
 	
 	.PARAMETER GenerateHTML
 		Generate a HTML Report Page {EXPERIMENTAL}
@@ -89,11 +95,32 @@
 	.PARAMETER SCXAgents
 		Linux/Unix Agents you want to gather data from, via Bash Script that is transmitted via ssh.
 	
+	.PARAMETER SCXMaintenanceUsername
+		The SCX Maintenance Username to use for gathering with the Linux Data Collector.
+	
+	.PARAMETER SCXMonitoringUsername
+		The SCX Monitoring Username to use for gathering with the Linux Data Collector.
+	
+	.PARAMETER SCXResourcePoolDisplayName
+		The Linux/Unix Resource Pool(s) to gather SCX WinRM data.
+	
 	.PARAMETER SCXUsername
 		The username you would like to use for SCX Agent SSH Authentication.
 	
+	.PARAMETER SCXWinRMCredentials
+		Provide the WinRM Credentials to use for SCX WinRM querying.
+	
+	.PARAMETER SCXWinRMEnumerateAllClasses
+		Enumerate all the WinRM classes to use for SCX WinRM querying.
+	
+	.PARAMETER SCXWinRMEnumerateSpecificClasses
+		Enumerate specific (comma separated) WinRM classes to use for SCX WinRM querying.
+	
 	.PARAMETER Servers
 		Set additional servers to run checks against. This can be Agents or Gateways, they have to be in the same domain at this time.
+	
+	.PARAMETER SkipBestPracticeAnalyzer
+		Skip the Best Practice Analyzer gathering.
 	
 	.PARAMETER SkipConnectivityTests
 		Skip the tests for remote accessibility, use this if you know your environment passes these tests. DO NOT USE IF YOU AREN'T SURE!
@@ -127,17 +154,18 @@
 		Blake Drumm (blakedrumm@microsoft.com)
 		
 		.CONTRIBUTORS
-		Kevin Holman
-		Tyson Paul
+		Kevin Holman (kevinhol)
+		Tyson Paul (typaul)
 		Lorne Sepaugh (lornesepaugh)
 		Michael Kallhoff (mikallho)
 		Bobby King (v-bking)
-		Tiago Fernandes (fernandes.tiago)
+		Tiago Fernandes (tifernan)
 		Alex Kremenetskiy (alexkre)
-		Andy Desmond (v-adesmond)
+		Andy Desmond (andydesmond)
 		Bryan Faul (v-bryanfaul)
 		Jordan Stanhope (jstanhope)
-		Brook Hudson (brook.hudson)
+		Brook Hudson (brhudso)
+		Udish Mudiar (udmudiar)
 	
 	.LINK
 		Blog Post:
@@ -150,9 +178,9 @@
 		https://github.com/blakedrumm/SCOM-Scripts-and-SQL
 		
 		.VERSION
-		v3.9.0 - May 26th, 2023
+		v4.0.0 - March 22nd, 2024
 #>
-[CmdletBinding()]
+[CmdletBinding(HelpUri = 'https://blakedrumm.com/blog/scom-data-collector/')]
 [OutputType([string])]
 param
 (
@@ -202,120 +230,151 @@ param
 			   HelpMessage = 'Export all Sealed/Unsealed MPs.')]
 	[Alias('em')]
 	[switch]$ExportMPs,
+	[Parameter(Position = 12,
+			   HelpMessage = 'Skip exporting the SCOM Management Server SCX Certificates.')]
+	[Alias('sesc')]
+	[switch]$ExportSCXCertificates,
+	[Parameter(Position = 11,
+			   HelpMessage = 'Export all Management Server Certificates.')]
+	[Alias('emc')]
+	[switch]$ExportMSCertificates,
 	[Parameter(Mandatory = $false,
-			   Position = 11,
+			   Position = 13,
 			   HelpMessage = 'Generate a HTML Report Page { EXPERIMENTAL }')]
 	[Alias('html')]
 	[switch]$GenerateHTML,
-	[Parameter(Position = 12,
+	[Parameter(Position = 14,
 			   HelpMessage = 'Gather the Registry / ConfigService.config Configuration of the Management Servers.')]
 	[switch]$GetConfiguration,
 	[Parameter(Mandatory = $false,
-			   Position = 13,
+			   Position = 15,
 			   HelpMessage = 'Gather Event Logs with the localemetadata to ensure that you are able to open the Event log from any machine.')]
 	[Alias('gel')]
 	[switch]$GetEventLogs,
 	[Parameter(Mandatory = $false,
-			   Position = 14,
+			   Position = 16,
 			   HelpMessage = 'Gather software installed from Management Servers / Agents / Gateways.')]
 	[switch]$GetInstalledSoftware,
-	[Parameter(Position = 15)]
+	[Parameter(Position = 17)]
 	[switch]$GetInstallLogs,
 	[Parameter(Mandatory = $false,
-			   Position = 16,
+			   Position = 18,
 			   HelpMessage = 'Get Local Administrators and Logon Rights.')]
 	[Alias('gls')]
 	[switch]$GetLocalSecurity,
 	[Parameter(Mandatory = $false,
-			   Position = 17,
+			   Position = 19,
 			   HelpMessage = 'A description of the GetNotificationSubscriptions parameter.')]
 	[switch]$GetNotificationSubscriptions,
 	[Parameter(Mandatory = $false,
-			   Position = 18,
+			   Position = 20,
 			   HelpMessage = 'A description of the GetRulesAndMonitors parameter.')]
 	[Alias('gram')]
 	[switch]$GetRulesAndMonitors,
 	[Parameter(Mandatory = $false,
-			   Position = 19,
+			   Position = 21,
 			   HelpMessage = 'Get RunAs Accounts that are set on each Management Server.')]
 	[Alias('graa')]
 	[switch]$GetRunAsAccounts,
 	[Parameter(Mandatory = $false,
-			   Position = 20,
+			   Position = 22,
 			   HelpMessage = 'Get SPN Configuration from Active Directory.')]
 	[Alias('gs')]
 	[switch]$GetSPN,
-	[Parameter(Position = 21,
+	[Parameter(Position = 23,
 			   HelpMessage = 'Gathers User Roles and the configurations from SCOM.')]
 	[switch]$GetUserRoles,
 	[Parameter(Mandatory = $false,
-			   Position = 22,
+			   Position = 24,
 			   HelpMessage = 'Gathers Group Policy Results to verify Harmful Policies are not present, Generated in HTML and TXT Format.')]
 	[Alias('gp')]
 	[switch]$GPResult,
 	[Parameter(Mandatory = $false,
-			   Position = 23,
+			   Position = 25,
 			   HelpMessage = 'Pull the least amount of data from SCOM.')]
 	[switch]$LeastAmount,
 	[Parameter(Mandatory = $false,
-			   Position = 24,
+			   Position = 26,
 			   HelpMessage = 'Only run data gathering against the Management Servers specified here.')]
 	[Alias('ms')]
 	[array]$ManagementServers,
 	[Parameter(Mandatory = $false,
-			   Position = 25,
+			   Position = 27,
 			   HelpMessage = 'Export MSInfo32 for viewing in TXT Format.')]
 	[Alias('mi32')]
 	[switch]$MSInfo32,
-	[Parameter(Position = 26,
+	[Parameter(Position = 28,
 			   HelpMessage = 'Internal Script Switch.')]
 	[switch]$NoSQLPermission,
 	[Parameter(Mandatory = $false,
-			   Position = 27,
+			   Position = 29,
 			   HelpMessage = 'Ping every Management Server, including servers mentioned in -Servers switch.')]
 	[switch]$PingAll,
 	[Parameter(Mandatory = $false,
-			   Position = 28,
+			   Position = 30,
 			   HelpMessage = 'Linux/Unix Agents you want to gather data from, via Bash Script that is transmitted via ssh.')]
 	[Alias('LinuxAgents')]
 	[Array]$SCXAgents,
+	[Parameter(Position = 31,
+			   HelpMessage = 'The SCX Maintenance Username to use for gathering with the Linux Data Collector.')]
+	[string]$SCXMaintenanceUsername,
+	[Parameter(Position = 32,
+			   HelpMessage = 'The SCX Monitoring Username to use for gathering with the Linux Data Collector.')]
+	[string]$SCXMonitoringUsername,
+	[Parameter(Position = 33,
+			   HelpMessage = 'The Linux/Unix Resource Pool to gather SCX WinRM data.')]
+	[Alias('scxrp')]
+	[string]$SCXResourcePoolDisplayName,
 	[Parameter(Mandatory = $false,
-			   Position = 30,
+			   Position = 34,
 			   HelpMessage = 'The username you would like to use for SCX Agent SSH Authentication.')]
 	[Alias('LinuxUsername')]
 	[string]$SCXUsername,
+	[Parameter(Position = 35,
+			   HelpMessage = 'Provide the WinRM Credentials to use for SCX WinRM querying.')]
+	[pscredential]$SCXWinRMCredentials,
+	[Parameter(Position = 36,
+			   HelpMessage = 'Enumerate all the WinRM classes to use for SCX WinRM querying.')]
+	[switch]$SCXWinRMEnumerateAllClasses,
+	[Parameter(Position = 37,
+			   HelpMessage = 'Enumerate specific (comma separated) WinRM classes to use for SCX WinRM querying.')]
+	[string[]]$SCXWinRMEnumerateSpecificClasses = @('SCX_UnixProcess', 'SCX_Agent', 'SCX_OperatingSystem'),
 	[Parameter(Mandatory = $false,
-			   Position = 31,
+			   Position = 38,
 			   HelpMessage = 'Set additional servers to run checks against. This can be Agents or Gateways, they have to be in the same domain at this time.')]
 	[Alias('s')]
 	[Array]$Servers,
-	[Parameter(Position = 32,
+	[Parameter(Position = 39,
+			   HelpMessage = 'Skip the Best Practice Analyzer gathering.')]
+	[Alias('sbpa')]
+	[switch]$SkipBestPracticeAnalyzer,
+	[Parameter(Position = 40,
 			   HelpMessage = 'Skip the tests for remote accessibility, use this if you know your environment passes these tests. DO NOT USE THIS IF YOU ARENT SURE!')]
 	[Alias('sct')]
 	[switch]$SkipConnectivityTests,
-	[Parameter(Position = 33,
+	[Parameter(Position = 41,
 			   HelpMessage = 'Skip the General Information file gathering.')]
 	[Alias('sgi')]
 	[switch]$SkipGeneralInformation,
 	[Parameter(Mandatory = $false,
-			   Position = 34,
+			   Position = 42,
 			   HelpMessage = 'Skip the SQL Queries. This will leave you with much less data in the data collector. Other functions in the data collector may rely on the SQL Queries and may be missing data.')]
 	[Alias('NoSQLQueries')]
 	[switch]$SkipSQLQueries,
-	[Parameter(Position = 35,
+	[Parameter(Position = 43,
 			   HelpMessage = 'Gather SQL Logs from OperationsManager and DataWarehouse DBs.')]
 	[switch]$SQLLogs,
 	[Parameter(Mandatory = $false,
-			   Position = 36,
+			   Position = 44,
 			   HelpMessage = 'Run only SQL Queries and Output to CSV.')]
 	[switch]$SQLOnly,
 	[Parameter(Mandatory = $false,
-			   Position = 37,
+			   Position = 45,
 			   HelpMessage = 'Internal Script Switch.',
 			   DontShow = $true)]
 	[switch]$SQLOnlyDW,
 	[Parameter(Mandatory = $false,
-			   Position = 38,
+			   Position = 46,
 			   HelpMessage = 'Internal Script Switch.',
 			   DontShow = $true)]
 	[switch]$SQLOnlyOpsDB
@@ -421,7 +480,7 @@ if (!($SQLOnly -or $SQLOnlyDW -or $SQLOnlyOpsDB))
 		Write-Console $permissiongranted -ForegroundColor Green
 	}
 	$currentUser = ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name).split('\')[1]
-	$omsdkUserOrig = (Get-CimInstance Win32_Service -Filter "Name='omsdk'").StartName -split '@'
+	$omsdkUserOrig = (Get-CimInstance Win32_Service -Filter "Name='omsdk'" -ErrorAction SilentlyContinue).StartName -split '@'
 	if ($omsdkUserOrig)
 	{
 		if ($omsdkUserOrig[1])
@@ -450,7 +509,7 @@ if (!($SQLOnly -or $SQLOnlyDW -or $SQLOnlyOpsDB))
 			}
 			else
 			{
-				$answer = Read-Host "Would you like to run this script as $($question)? (Y/N)"
+				$answer = Read-Host "`n[OPTIONAL]`n Would you like to run this script as $($question)? (Y/N)"
 			}
 		}
 		until ($answer -eq "y" -or $answer -eq "n")
@@ -537,124 +596,156 @@ function Start-ScomDataCollector
 				   HelpMessage = 'Export all Sealed/Unsealed MPs.')]
 		[Alias('em')]
 		[switch]$ExportMPs,
+		[Parameter(Position = 12,
+				   HelpMessage = 'Skip exporting the SCOM Management Server SCX Certificates.')]
+		[Alias('sesc')]
+		[switch]$ExportSCXCertificates,
+		[Parameter(Position = 11,
+				   HelpMessage = 'Export all Management Server Certificates.')]
+		[Alias('emc')]
+		[switch]$ExportMSCertificates,
 		[Parameter(Mandatory = $false,
-				   Position = 11,
+				   Position = 13,
 				   HelpMessage = 'Generate a HTML Report Page { EXPERIMENTAL }')]
 		[Alias('html')]
 		[switch]$GenerateHTML,
-		[Parameter(Position = 12,
+		[Parameter(Position = 14,
 				   HelpMessage = 'Gather the Registry / ConfigService.config Configuration of the Management Servers.')]
 		[switch]$GetConfiguration,
 		[Parameter(Mandatory = $false,
-				   Position = 13,
+				   Position = 15,
 				   HelpMessage = 'Gather Event Logs with the localemetadata to ensure that you are able to open the Event log from any machine.')]
 		[Alias('gel')]
 		[switch]$GetEventLogs,
 		[Parameter(Mandatory = $false,
-				   Position = 14,
+				   Position = 16,
 				   HelpMessage = 'Gather software installed from Management Servers / Agents / Gateways.')]
 		[switch]$GetInstalledSoftware,
-		[Parameter(Position = 15)]
+		[Parameter(Position = 17)]
 		[switch]$GetInstallLogs,
 		[Parameter(Mandatory = $false,
-				   Position = 16,
+				   Position = 18,
 				   HelpMessage = 'Get Local Administrators and Logon Rights.')]
 		[Alias('gls')]
 		[switch]$GetLocalSecurity,
 		[Parameter(Mandatory = $false,
-				   Position = 17,
+				   Position = 19,
 				   HelpMessage = 'A description of the GetNotificationSubscriptions parameter.')]
 		[switch]$GetNotificationSubscriptions,
 		[Parameter(Mandatory = $false,
-				   Position = 18,
+				   Position = 20,
 				   HelpMessage = 'A description of the GetRulesAndMonitors parameter.')]
 		[Alias('gram')]
 		[switch]$GetRulesAndMonitors,
 		[Parameter(Mandatory = $false,
-				   Position = 19,
+				   Position = 21,
 				   HelpMessage = 'Get RunAs Accounts that are set on each Management Server.')]
 		[Alias('graa')]
 		[switch]$GetRunAsAccounts,
 		[Parameter(Mandatory = $false,
-				   Position = 20,
+				   Position = 22,
 				   HelpMessage = 'Get SPN Configuration from Active Directory.')]
 		[Alias('gs')]
 		[switch]$GetSPN,
-		[Parameter(Position = 21,
+		[Parameter(Position = 23,
 				   HelpMessage = 'Gathers User Roles and the configurations from SCOM.')]
 		[switch]$GetUserRoles,
 		[Parameter(Mandatory = $false,
-				   Position = 22,
+				   Position = 24,
 				   HelpMessage = 'Gathers Group Policy Results to verify Harmful Policies are not present, Generated in HTML and TXT Format.')]
 		[Alias('gp')]
 		[switch]$GPResult,
 		[Parameter(Mandatory = $false,
-				   Position = 23,
+				   Position = 25,
 				   HelpMessage = 'Pull the least amount of data from SCOM.')]
 		[switch]$LeastAmount,
 		[Parameter(Mandatory = $false,
-				   Position = 24,
+				   Position = 26,
 				   HelpMessage = 'Only run data gathering against the Management Servers specified here.')]
 		[Alias('ms')]
 		[array]$ManagementServers,
 		[Parameter(Mandatory = $false,
-				   Position = 25,
+				   Position = 27,
 				   HelpMessage = 'Export MSInfo32 for viewing in TXT Format.')]
 		[Alias('mi32')]
 		[switch]$MSInfo32,
-		[Parameter(Position = 26,
+		[Parameter(Position = 28,
 				   HelpMessage = 'Internal Script Switch.')]
 		[switch]$NoSQLPermission,
 		[Parameter(Mandatory = $false,
-				   Position = 27,
+				   Position = 29,
 				   HelpMessage = 'Ping every Management Server, including servers mentioned in -Servers switch.')]
 		[switch]$PingAll,
 		[Parameter(Mandatory = $false,
-				   Position = 28,
+				   Position = 30,
 				   HelpMessage = 'Linux/Unix Agents you want to gather data from, via Bash Script that is transmitted via ssh.')]
 		[Alias('LinuxAgents')]
 		[Array]$SCXAgents,
+		[Parameter(Position = 31,
+				   HelpMessage = 'The SCX Maintenance Username to use for gathering with the Linux Data Collector.')]
+		[string]$SCXMaintenanceUsername,
+		[Parameter(Position = 32,
+				   HelpMessage = 'The SCX Monitoring Username to use for gathering with the Linux Data Collector.')]
+		[string]$SCXMonitoringUsername,
+		[Parameter(Position = 33,
+				   HelpMessage = 'The Linux/Unix Resource Pool(s) to gather SCX WinRM data.')]
+		[Alias('scxrp')]
+		[string[]]$SCXResourcePoolDisplayName,
 		[Parameter(Mandatory = $false,
-				   Position = 30,
+				   Position = 34,
 				   HelpMessage = 'The username you would like to use for SCX Agent SSH Authentication.')]
 		[Alias('LinuxUsername')]
 		[string]$SCXUsername,
+		[Parameter(Position = 35,
+				   HelpMessage = 'Provide the WinRM Credentials to use for SCX WinRM querying.')]
+		[pscredential]$SCXWinRMCredentials,
+		[Parameter(Position = 36,
+				   HelpMessage = 'Enumerate all the WinRM classes to use for SCX WinRM querying.')]
+		[switch]$SCXWinRMEnumerateAllClasses,
+		[Parameter(Position = 37,
+				   HelpMessage = 'Enumerate specific (comma separated) WinRM classes to use for SCX WinRM querying.')]
+		[string[]]$SCXWinRMEnumerateSpecificClasses = @('SCX_UnixProcess', 'SCX_Agent', 'SCX_OperatingSystem'),
 		[Parameter(Mandatory = $false,
-				   Position = 31,
+				   Position = 38,
 				   HelpMessage = 'Set additional servers to run checks against. This can be Agents or Gateways, they have to be in the same domain at this time.')]
 		[Alias('s')]
 		[Array]$Servers,
-		[Parameter(Position = 32,
+		[Parameter(Position = 39,
+				   HelpMessage = 'Skip the Best Practice Analyzer gathering.')]
+		[Alias('sbpa')]
+		[switch]$SkipBestPracticeAnalyzer,
+		[Parameter(Position = 40,
 				   HelpMessage = 'Skip the tests for remote accessibility, use this if you know your environment passes these tests. DO NOT USE THIS IF YOU ARENT SURE!')]
 		[Alias('sct')]
 		[switch]$SkipConnectivityTests,
-		[Parameter(Position = 33,
+		[Parameter(Position = 41,
 				   HelpMessage = 'Skip the General Information file gathering.')]
 		[Alias('sgi')]
 		[switch]$SkipGeneralInformation,
 		[Parameter(Mandatory = $false,
-				   Position = 34,
+				   Position = 42,
 				   HelpMessage = 'Skip the SQL Queries. This will leave you with much less data in the data collector. Other functions in the data collector may rely on the SQL Queries and may be missing data.')]
 		[Alias('NoSQLQueries')]
 		[switch]$SkipSQLQueries,
-		[Parameter(Position = 35,
+		[Parameter(Position = 43,
 				   HelpMessage = 'Gather SQL Logs from OperationsManager and DataWarehouse DBs.')]
 		[switch]$SQLLogs,
 		[Parameter(Mandatory = $false,
-				   Position = 36,
+				   Position = 44,
 				   HelpMessage = 'Run only SQL Queries and Output to CSV.')]
 		[switch]$SQLOnly,
 		[Parameter(Mandatory = $false,
-				   Position = 37,
+				   Position = 45,
 				   HelpMessage = 'Internal Script Switch.',
 				   DontShow = $true)]
 		[switch]$SQLOnlyDW,
 		[Parameter(Mandatory = $false,
-				   Position = 38,
+				   Position = 46,
 				   HelpMessage = 'Internal Script Switch.',
 				   DontShow = $true)]
 		[switch]$SQLOnlyOpsDB
 	)
+	
 	# Gather the Parameters Passed to the function
 	$cmdName = $MyInvocation.InvocationName
 	$paramList = (Get-Command -Name $cmdName).Parameters
@@ -698,7 +789,7 @@ function Start-ScomDataCollector
 	Import-Module OperationsManager -ErrorAction SilentlyContinue
 	IF (!(Test-Path $OutputPath))
 	{
-		Write-Console "Output folder not found.  Creating folder...." -ForegroundColor Gray
+		Write-Console "Output folder not found.  Creating output folder...." -ForegroundColor Gray
 		mkdir $OutputPath | out-null
 	}
 	else
@@ -711,10 +802,21 @@ function Start-ScomDataCollector
 				Stop-Process $_.ProcessId -Force -ErrorAction SilentlyContinue
 			}
 		}
-		Remove-Item -Path $OutputPath -Recurse | Out-Null
-		Write-Console "Creating folder...." -ForegroundColor Gray
+		Remove-Item -Path $OutputPath -Recurse -Force | Out-Null
+		Write-Console "Creating output folder...." -ForegroundColor Gray
 		mkdir $OutputPath | out-null
 		mkdir $OutputPath\CSV | out-null
+	}
+	if ($SCXAgents -and -NOT $SCXWinRMCredentials)
+	{
+		if ($SCXUsername)
+		{
+			$SCXWinRMCredentials = (Get-Credential $SCXUsername)
+		}
+		else
+		{
+			$SCXWinRMCredentials = (Get-Credential)
+		}
 	}
 	$MSKey = "HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Server Management Groups"
 	IF (Test-Path $MSKey)
@@ -814,12 +916,9 @@ function Start-ScomDataCollector
 			Write-Console "Moving stuff around and zipping everything up for easy transport" -ForegroundColor Gray
 			. $ScriptPath`\Functions\Wrapping-Up.ps1
 			Invoke-WrapUp -BuildPipeline:$BuildPipeline
-			
-			Write-Console "Script has completed!" -ForegroundColor Green -NoNewline
+			Write-Console "`nScript has completed!`n" -ForegroundColor Green -NoNewline
 			Start-Sleep -Seconds 1
-			Write-Output " "
-			Write-Warning "Exiting script..."
-			Start-Process C:\Windows\explorer.exe -ArgumentList "/select, $destfile"
+			Start-Process C:\Windows\explorer.exe -ArgumentList "/select, $script:destfile"
 			break
 		}
 		else
@@ -971,16 +1070,48 @@ function Start-ScomDataCollector
 	#region Linux Agent Gather Script
 	if ($SCXAgents)
 	{
-		Write-Output " "
-		Write-Output "================================`nStarting SCX Agent Checker (Linux/Unix)"
-		. $ScriptPath`\Functions\Linux-DataCollector.ps1
-		Start-LinuxDataCollector -Servers $SCXAgents -Username $SCXUsername
+		try
+		{
+			$UNIXAgentPools = (Import-Csv "$OutputPath\UNIX_Agents.csv" -ErrorAction Stop).ResourcePool | Select-Object -Unique
+			$UNIXManagementServer = (Import-Csv "$OutputPath\ResourcePools.csv" -ErrorAction Stop | Where-Object { $_.ResourcePool -in $UNIXAgentPools -and $SCXResourcePools -contains $_.ResourcePool}).Member
+		}
+		catch
+		{
+			Write-Host "NOT FOUND"
+			$UNIXManagementServer = $null
+		}
+		if ($UNIXManagementServer)
+		{
+			Write-Output " "
+			Write-Output "================================`nGathering Linux Data Collector (UNIX/Linux)"
+			. $ScriptPath`\Functions\Linux-DataCollector.ps1
+			Start-LinuxDataCollector -Servers $SCXAgents -Username $SCXUsername -SCXMaintenanceUsername $SCXMaintenanceUsername -SCXMonitoringUsername $SCXMonitoringUsername
+			
+			Write-Output " "
+			Write-Output "================================`nGathering SCX WinRM data (UNIX/Linux)"
+			. $ScriptPath`\Functions\Linux-WinRM-Tests.ps1
+			Write-Console "  Gathering Linux Agent Data from: $($SCXAgents -join ", ")" -ForegroundColor Green
+			if ($SCXWinRMEnumerateAllClasses)
+			{
+				Invoke-SCXWinRMEnumeration -OriginServer $UNIXManagementServer -ComputerName $SCXAgents -Credential $SCXWinRMCredentials -EnumerateAllClasses -OutputType Text -OutputFile $OutputPath\SCX_WinRM_Queries -PassThru | Out-Null
+			}
+			else
+			{
+				Invoke-SCXWinRMEnumeration -OriginServer $UNIXManagementServer -ComputerName $SCXAgents -Credential $SCXWinRMCredentials -Classes $SCXWinRMEnumerateSpecificClasses -OutputType Text -OutputFile $OutputPath\SCX_WinRM_Queries -PassThru | Out-Null
+			}
+		}
+		else
+		{
+			"$(Invoke-TimeStamp)Could not find any Management Servers associated with SCX Resource Pool(s): $SCXResourcePools" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "Could not find any Management Servers associated with SCX Resource Pool(s): $SCXResourcePools"
+		}
 	}
 	#endregion Linux Agent Gather Script
 	#region Least Amount
 	if (!$LeastAmount)
 	{
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 6%" -PercentComplete 6
+		$error.clear()
 		try
 		{
 			if ($GetRunAsAccounts)
@@ -997,16 +1128,17 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather RunAs Accounts due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather RunAs Accounts due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 8%" -PercentComplete 8
+		$error.clear()
 		try
 		{
 			if ($CheckCertificates)
 			{
 				Write-Output " "
-				Write-Output "================================`nStarting Certificate Checker"
+				Write-Output "================================`nGathering and checking Certificates"
 				. $ScriptPath`\Functions\Certificate-Check.ps1
 				New-Item -ItemType Directory -Path "$OutputPath\Certificates" -Force -ErrorAction Stop | Out-Null
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 9%" -PercentComplete 9
@@ -1015,12 +1147,21 @@ function Start-ScomDataCollector
 					Invoke-SCOMCertificateChecker -Servers $CertChkSvr -OutputFile $OutputPath\Certificates\$CertChkSvr.CertificateInfo.txt
 				}
 			}
+			if ($ExportMSCertificates)
+			{
+				Write-Output " "
+				Write-Output "================================`nExporting Management Server Certificates"
+				. $ScriptPath`\Functions\Export-SCOMMSCertificate.ps1
+				Write-Progress -Activity "Collection Running" -Status "Progress-> 10%" -PercentComplete 10
+				Export-SCOMMSCertificate -Servers $TestedTLSservers -ExportPath $OutputPath\Certificates
+			}
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather SCOM Certificates due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather SCOM Certificates due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
+		$error.clear()
 		try
 		{
 			if ($GetInstalledSoftware)
@@ -1028,7 +1169,7 @@ function Start-ScomDataCollector
 				Write-Output " "
 				Write-Output "================================`nGathering Installed Software"
 				. $ScriptPath`\Functions\Get-InstalledSoftware.ps1
-				Write-Progress -Activity "Collection Running" -Status "Progress-> 10%" -PercentComplete 10
+				Write-Progress -Activity "Collection Running" -Status "Progress-> 11%" -PercentComplete 11
 				# Get Installed Software
 				$installedsoftware = Invoke-GetInstalledSoftware -Servers $TestedTLSservers
 				$installedsoftware | Format-Table * -AutoSize | Out-String -Width 4096 | Out-File "$OutputPath\Installed-Software.txt"
@@ -1037,9 +1178,10 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather Installed Software due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather Installed Software due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
+		$error.clear()
 		try
 		{
 			if ($GetSPN)
@@ -1047,7 +1189,7 @@ function Start-ScomDataCollector
 				Write-Output " "
 				Write-Output "================================`nGathering SPNs from Active Directory"
 				. $ScriptPath`\Functions\Get-SPN.ps1
-				Write-Progress -Activity "Collection Running" -Status "Progress-> 11%" -PercentComplete 11
+				Write-Progress -Activity "Collection Running" -Status "Progress-> 12%" -PercentComplete 12
 				# Get SPNs from Active Directory
 				Write-Console "  Running function to gather SPN Data" -ForegroundColor Gray -NoNewline
 				try
@@ -1057,8 +1199,8 @@ function Start-ScomDataCollector
 				}
 				catch
 				{
-					"$(Invoke-TimeStamp)Unable to gather SPN Output due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-					"Unable to gather SPN Output due to Error: `n$($error[0])" | Out-File -FilePath $OutputPath\SPN-Output.txt -Force
+					"$(Invoke-TimeStamp)Unable to gather SPN Output due to error: $($error[0])" | Out-File $OutputPath\Error.log -Append
+					"Unable to gather SPN Output due to error: `n$($error[0])" | Out-File -FilePath $OutputPath\SPN-Output.txt -Force
 				}
 				try
 				{
@@ -1067,8 +1209,8 @@ function Start-ScomDataCollector
 				}
 				catch
 				{
-					"$(Invoke-TimeStamp)Unable to gather SPN Output due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-					"Unable to gather SPN Output due to Error: `n$($error[0])" | Out-File -FilePath $OutputPath\SPN-Output.txt -Force
+					"$(Invoke-TimeStamp)Unable to gather SPN Output due to error: $($error[0])" | Out-File $OutputPath\Error.log -Append
+					"Unable to gather SPN Output due to error: `n$($error[0])" | Out-File -FilePath $OutputPath\SPN-Output.txt -Force
 				}
 				if ($spnOutput1 -or $spnOutput2)
 				{
@@ -1083,17 +1225,18 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather SPN data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather SPN data due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
+		$error.clear()
 		try
 		{
 			if ($CheckTLS)
 			{
 				Write-Output " "
-				Write-Output "================================`nStarting TLS Checker"
+				Write-Output "================================`nGathering TLS Data"
 				. $ScriptPath`\Functions\Get-TLSRegKeys.ps1
-				Write-Progress -Activity "Collection Running" -Status "Progress-> 12%" -PercentComplete 12
+				Write-Progress -Activity "Collection Running" -Status "Progress-> 13%" -PercentComplete 13
 				# This will be updated with CipherSuite checks at some point
 				Get-TLSRegistryKeys -Servers $TestedTLSservers |
 				Out-File $OutputPath\TLS-RegistryKeys.txt
@@ -1101,32 +1244,33 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather TLS data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather TLS data due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
+		$error.clear()
 		try
 		{
 			if ($GetConfiguration)
 			{
-				Write-Progress -Activity "Collection Running" -Status "Progress-> 13%" -PercentComplete 13
+				Write-Progress -Activity "Collection Running" -Status "Progress-> 14%" -PercentComplete 14
 				Write-Output " "
-				Write-Output "================================`nStarting Management Server Configuration Gather"
+				Write-Output "================================`nGathering Management Server Configuration"
 				. $ScriptPath`\Functions\Get-Configuration.ps1
 				Get-SCOMConfiguration -Servers $ManagementServers
 			}
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather Configuration data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather Configuration data due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
-		Write-Progress -Activity "Collection Running" -Status "Progress-> 14%" -PercentComplete 14
+		$error.clear()
 		try
 		{
 			if ($GetEventLogs -or $AdditionalEventLogs)
 			{
 				Write-Output " "
-				Write-Output "================================`nStarting Event Log Gathering"
+				Write-Output "================================`nGathering Event Logs"
 				. $ScriptPath`\Functions\Get-EventLog.ps1
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 16%" -PercentComplete 16
 				if ((Test-Path -Path "$OutputPath\Event Logs") -eq $false)
@@ -1163,10 +1307,11 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather Event Log data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather Event Log data due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 22%" -PercentComplete 22
+		$error.clear()
 		try
 		{
 			if ($ExportMPs)
@@ -1175,7 +1320,7 @@ function Start-ScomDataCollector
 				{
 					if ($mgmtserver -eq 1)
 					{
-						Write-Output "================================`nStarting Management Pack Export"
+						Write-Output "================================`nExporting Management Packs"
 						. $ScriptPath`\Functions\Export-ManagementPack.ps1
 						Write-Progress -Activity "Collection Running" -Status "Progress-> 23%" -PercentComplete 23
 						Invoke-MPExport
@@ -1196,17 +1341,18 @@ function Start-ScomDataCollector
 				}
 				catch
 				{
-					Write-Warning $_; "$(Invoke-TimeStamp)Unable to gather Event Log data due to Error: $_" | Out-File $OutputPath\Error.log -Append
-					Write-Warning $error[0]
+					Write-Warning $_; "$(Invoke-TimeStamp)Unable to gather Event Log data due to error: $error" | Out-File $OutputPath\Error.log -Append
+					Write-Warning "$error"
 				}
 			}
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather Event Log data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather Event Log data due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 24%" -PercentComplete 24
+		$error.clear()
 		try
 		{
 			if ($GetRulesAndMonitors)
@@ -1221,10 +1367,11 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather Rules and Monitors data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather Rules and Monitors data due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 26%" -PercentComplete 26
+		$error.clear()
 		try
 		{
 			if ($GetLocalSecurity)
@@ -1238,31 +1385,33 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather Local Security / User Account Rights data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather Local Security / User Account Rights data due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 30%" -PercentComplete 30
+		$error.clear()
 		try
 		{
 			if ($CheckPorts)
 			{
 				. $ScriptPath`\Functions\Test-SCOMPorts.ps1
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 32%" -PercentComplete 32
-				Invoke-TestSCOMPorts -SourceServer $TestedTLSservers -DestinationServer $env:COMPUTERNAME -OutputFile $OutputPath\Port_Checker.txt
+				Invoke-TestSCOMPorts -SourceServer $TestedTLSservers -DestinationServer $env:COMPUTERNAME -OutputFile $OutputPath\Port_Checker.txt -OutputType CSV, Text
 			}
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to Test SCOM Ports due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to Test SCOM Ports due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 34%" -PercentComplete 34
+		$error.clear()
 		try
 		{
 			if ($msinfo32)
 			{
 				write-output " "
-				Write-Console "================================`nStarting MSInfo32 reporting"
+				Write-Console "================================`nGathering MSInfo32"
 				. $ScriptPath`\Functions\MsInfo32.ps1
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 36%" -PercentComplete 36
 				Invoke-MSInfo32Gathering
@@ -1270,9 +1419,10 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather MSInfo32 data due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather MSInfo32 data due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
+		$error.clear()
 		try
 		{
 			if ($GetNotificationSubscriptions)
@@ -1286,27 +1436,29 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to Get Notification Subscriptions due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to Get Notification Subscriptions due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 38%" -PercentComplete 38
+		$error.clear()
 		try
 		{
 			if ($SQLLogs)
 			{
+				$error.clear()
 				try
 				{
 					Write-Progress -Activity "Collection Running" -Status "Progress-> 39%" -PercentComplete 39
-					if (Test-Path $OutputPath\SQL_ErrorLogLocation_OpsDB.csv)
+					if (Test-Path $OutputPath\SQL_ErrorLogLocation_OpsDB.csv -ErrorAction Stop)
 					{
 						write-output " "
 						Write-Console "================================`nGathering SQL Logs"
 						
 						mkdir "$OutputPath`\SQL Logs" | out-null
-						$SQLOMLogLoc = Import-Csv $OutputPath\SQL_ErrorLogLocation_OpsDB.csv
+						$SQLOMLogLoc = Import-Csv $OutputPath\SQL_ErrorLogLocation_OpsDB.csv -ErrorAction Stop
 						if ($DW_SQLServer -ne $opsdb_SQLServer)
 						{
-							$SQLDWLogLoc = Import-Csv $OutputPath\SQL_ErrorLogLocation_DW.csv
+							$SQLDWLogLoc = Import-Csv $OutputPath\SQL_ErrorLogLocation_DW.csv -ErrorAction Stop
 						}
 						else
 						{
@@ -1358,17 +1510,17 @@ function Start-ScomDataCollector
 				}
 				catch
 				{
-					Write-Warning 'Unable to locate the Log Location from SQL Query.'
-					Write-Warning $error[0]
+					"$(Invoke-TimeStamp)Unable to Gather SQL Error Logs due to error: $error" | Out-File $OutputPath\Error.log -Append
 				}
 				
 			}
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to Gather SQL Error Logs due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
+			"$(Invoke-TimeStamp)Unable to Gather SQL Error Logs due to error: $error" | Out-File $OutputPath\Error.log -Append
 		}
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 44%" -PercentComplete 44
+		$error.clear()
 		try
 		{
 			if ($GetInstallLogs)
@@ -1382,10 +1534,11 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather SCOM Install Logs due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather SCOM Install Logs due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 48%" -PercentComplete 48
+		$error.clear()
 		try
 		{
 			if ($GPResult)
@@ -1439,9 +1592,10 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to gather GPResult due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-			Write-Warning $error[0]
+			"$(Invoke-TimeStamp)Unable to gather GPResult due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
 		}
+		$error.clear()
 		try
 		{
 			if ($CheckGroupPolicy)
@@ -1456,7 +1610,7 @@ function Start-ScomDataCollector
 		}
 		catch
 		{
-			"$(Invoke-TimeStamp)Unable to update Group Policy due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
+			"$(Invoke-TimeStamp)Unable to update Group Policy due to error: $error" | Out-File $OutputPath\Error.log -Append
 		}
 		if ($GetUserRoles)
 		{
@@ -1474,10 +1628,10 @@ function Start-ScomDataCollector
 				{
 					Write-Console "    $UserRole" -ForegroundColor Magenta
 					$UserRoles += New-Object -TypeName psobject -Property @{
-						Name = $UserRole.Name;
+						Name	    = $UserRole.Name;
 						DisplayName = $UserRole.DisplayName;
 						Description = $UserRole.Description;
-						Users = ($UserRole.Users -join "; ");
+						Users	    = ($UserRole.Users -join "; ");
 					}
 				}
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 61%" -PercentComplete 61
@@ -1487,8 +1641,8 @@ function Start-ScomDataCollector
 			}
 			catch
 			{
-				"$(Invoke-TimeStamp)Unable to gather User Role Information due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-				Write-Warning $error[0]
+				"$(Invoke-TimeStamp)Unable to gather User Role Information due to error: $($error[0])" | Out-File $OutputPath\Error.log -Append
+				Write-Warning "$error"[0]
 			}
 		}
 		
@@ -1496,6 +1650,7 @@ function Start-ScomDataCollector
 	#endregion least amount
 	
 	#region Pending Management
+	$error.clear()
 	try
 	{
 		if (!$ManagementServers)
@@ -1520,11 +1675,12 @@ function Start-ScomDataCollector
 	}
 	catch
 	{
-		"$(Invoke-TimeStamp)Unable to gather Agents Pending Management due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-		Write-Verbose "$(Invoke-TimeStamp)Unable to gather Agents Pending Management due to Error: $($error[0])"
+		"$(Invoke-TimeStamp)Unable to gather Agents Pending Management due to error: $error" | Out-File $OutputPath\Error.log -Append
+		Write-Verbose "$(Invoke-TimeStamp)Unable to gather Agents Pending Management due to error: $error"
 	}
 	
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 62%" -PercentComplete 62
+	$error.clear()
 	try
 	{
 		if ($pendingMgmt)
@@ -1533,7 +1689,7 @@ function Start-ScomDataCollector
 			$pendingCount = ($pendingMgmt).Count
 			if ($pendingCount -ne 0)
 			{
-				"Current Count of Pending Management: " + $pendingCount | Out-File -FilePath "$OutputPath\Pending Management.txt"
+				"Current Count of Pending Management: " + $pendingCount | Out-File -FilePath "$OutputPath\Pending Management.txt" -ErrorAction Stop
 				Write-Console "    Running Powershell Command: " -NoNewLine -ForegroundColor Cyan
 				Write-Console "`n      Get-SCOMPendingManagement" -NoNewLine -ForegroundColor Magenta
 				Write-Console " against" -NoNewLine -ForegroundColor Cyan
@@ -1551,8 +1707,8 @@ function Start-ScomDataCollector
 	}
 	catch
 	{
-		"$(Invoke-TimeStamp)Unable to gather Agents Pending Management due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-		Write-Verbose "$(Invoke-TimeStamp)Unable to gather Agents Pending Management due to Error: $($error[0])"
+		"$(Invoke-TimeStamp)Unable to gather Agents Pending Management due to error: $error" | Out-File $OutputPath\Error.log -Append
+		Write-Verbose "$(Invoke-TimeStamp)Unable to gather Agents Pending Management due to error: $error"
 	}
 	#endregion Pending Management
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 64%" -PercentComplete 64
@@ -1571,22 +1727,64 @@ function Start-ScomDataCollector
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 97%" -PercentComplete 97
 	}
 	# Best Practices
-	Write-Verbose "$(Invoke-TimeStamp)Executing Best Practice Function"
-	. $ScriptPath`\Functions\Get-BestPractices.ps1
-	Write-Progress -Activity "Collection Running" -Status "Progress-> 98%" -PercentComplete 98
-	Write-Output " "
-	try
+	if (!$SkipBestPracticeAnalyzer)
 	{
-		Write-Output "================================`nStarting System Center Operations Manager Best Practice Analyzer"
-		Invoke-GetBestPractices -Servers $ManagementServers
-	}
-	catch
-	{
-		"$(Invoke-TimeStamp)Unable to gather Best Practices due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-		Write-Warning $error[0]
+		Write-Verbose "$(Invoke-TimeStamp)Executing Best Practice Function"
+		. $ScriptPath`\Functions\Get-BestPractices.ps1
+		Write-Progress -Activity "Collection Running" -Status "Progress-> 98%" -PercentComplete 98
+		Write-Output " "
+		$error.clear()
+		try
+		{
+			Write-Output "================================`nChecking Environment for Best Practices"
+			Invoke-GetBestPractices -Servers $ManagementServers
+		}
+		catch
+		{
+			"$(Invoke-TimeStamp)Unable to gather Best Practices due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
+		}
 	}
 	
+	# Export SCOM SCX Certificates
+	if ($ExportSCXCertificates)
+	{
+		Write-Progress -Activity "Collection Running" -Status "Progress-> 99%" -PercentComplete 99
+		Write-Verbose "$(Invoke-TimeStamp)Executing Export SCOM SCX Certificates Function"
+		. $ScriptPath`\Functions\Export-SCOMSCXCertificate.ps1
+		
+		$error.clear()
+		try
+		{
+			New-Item -ItemType 'Directory' -Path "$OutputPath\Management Server SCX Certificates" -ErrorAction Stop | Out-Null
+		}
+		catch
+		{
+			"$(Invoke-TimeStamp)Unable to create the SCX Certificates folder due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
+		}
+		Write-Console "-" -NoNewline -ForegroundColor Green
+		Write-Output " "
+		$error.clear()
+		try
+		{
+			Write-Output "`n================================`nGathering Management Server SCX Certificates"
+			Write-Console "  Executing Function" -NoNewLine -ForegroundColor Cyan
+			Write-Console "-" -NoNewline -ForegroundColor Green
+			Export-SCXCertificate -OutputDirectory "$OutputPath\Management Server SCX Certificates" -ComputerName $ManagementServers
+			Write-Console "-" -NoNewline -ForegroundColor Green
+		}
+		catch
+		{
+			"$(Invoke-TimeStamp)Unable to export the Management Server SCX Certificates due to error: $error" | Out-File $OutputPath\Error.log -Append
+			Write-Warning "$error"
+		}
+		Write-Console "> Completed!`n" -NoNewline -ForegroundColor Green
+	}
+	
+	
 	# end Best Practices
+	$error.clear()
 	try
 	{
 		if ($GenerateHTML)
@@ -1603,27 +1801,24 @@ function Start-ScomDataCollector
 	}
 	catch
 	{
-		"$(Invoke-TimeStamp)Unable to run HTML Report due to Error: $($error[0])" | Out-File $OutputPath\Error.log -Append
-		Write-Warning $error[0]
+		"$(Invoke-TimeStamp)Unable to run HTML Report due to error: $error" | Out-File $OutputPath\Error.log -Append
+		Write-Warning "$error"
 	}
-	Write-Progress -Activity "Collection Running" -Status "Progress-> 99%" -PercentComplete 99
 	write-output " "
 	write-output "================================`n   Wrapping Up`n================================"
 	Write-Console "Moving stuff around and zipping everything up for easy transport" -ForegroundColor Gray
 	. $ScriptPath`\Functions\Wrapping-Up.ps1
 	Invoke-WrapUp -BuildPipeline:$BuildPipeline
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 100%" -PercentComplete 100
-	Write-Console "-Script has completed" -ForegroundColor Green -NoNewline
+	Write-Console " -Script has completed" -ForegroundColor Green -NoNewline
 	$x = 1
-	do { $x++; Write-Console "." -NoNewline -ForegroundColor Green; Start-Sleep 1 }
-	until ($x -eq 3)
-	Write-Output " "
-	Write-Warning "Exiting script..."
-	Start-Process C:\Windows\explorer.exe -ArgumentList "/select, $destfile"
+	do { $x++; Write-Console "." -NoNewline -ForegroundColor Green; Start-Sleep -Millisecond 50 }
+	until ($x -eq 4)
+	Start-Process C:\Windows\explorer.exe -ArgumentList "/select, $script:destfile"
 	exit 0
 }
 
-if ($BuildPipeline -or $CheckTLS -or $CheckCertificates -or $GetEventLogs -or $MSInfo32 -or $AssumeYes -or $ExportMPs -or $CaseNumber -or $Servers -or $GenerateHTML -or $GetRulesAndMonitors -or $GetRunAsAccounts -or $All -or $GPResult -or $SQLLogs -or $NoSQLPermission -or $SQLOnly -or $SQLOnlyOpsDB -or $SQLOnlyDW -or $CheckPorts -or $GetLocalSecurity -or $LeastAmount -or $GetNotificationSubscriptions -or $AdditionalEventLogs -or $GetInstalledSoftware -or $GetSPN -or $ManagementServers -or $SkipConnectivityTests -or $GetConfiguration -or $SkipGeneralInformation -or $SkipSQLQueries -or $CheckGroupPolicy -or $GetInstallLogs -or $SCXAgents -or $SCXUsername -or $GetUserRoles)
+if ($BuildPipeline -or $CheckTLS -or $CheckCertificates -or $GetEventLogs -or $MSInfo32 -or $AssumeYes -or $ExportMPs -or $ExportMSCertificates -or $CaseNumber -or $Servers -or $GenerateHTML -or $GetRulesAndMonitors -or $GetRunAsAccounts -or $All -or $GPResult -or $SQLLogs -or $NoSQLPermission -or $SQLOnly -or $SQLOnlyOpsDB -or $SQLOnlyDW -or $CheckPorts -or $GetLocalSecurity -or $LeastAmount -or $GetNotificationSubscriptions -or $AdditionalEventLogs -or $GetInstalledSoftware -or $GetSPN -or $ManagementServers -or $SkipBestPracticeAnalyzer -or $SkipConnectivityTests -or $GetConfiguration -or $SkipGeneralInformation -or $ExportSCXCertificates -or $SkipSQLQueries -or $CheckGroupPolicy -or $GetInstallLogs -or $SCXAgents -or $SCXUsername -or $SCXMaintenanceUsername -or $SCXMonitoringUsername -or $SCXWinRMCredentials -or $SCXWinRMEnumerateAllClasses -or $SCXResourcePoolDisplayName -or $GetUserRoles)
 {
 	if ($all)
 	{
@@ -1631,27 +1826,37 @@ if ($BuildPipeline -or $CheckTLS -or $CheckCertificates -or $GetEventLogs -or $M
 		{
 			if ($AssumeYes)
 			{
-				Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+				Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -ExportMSCertificates -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles
 			}
-			Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+			else
+			{
+				Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -ExportMSCertificates -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles
+			}
 		}
-		if ($AssumeYes)
-		{
-			Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
-		}
-		if ($SCXAgents)
+		elseif ($SCXAgents)
 		{
 			if ($AssumeYes)
 			{
-				Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -SCXAgents $SCXAgents -SCXUsername $SCXUsername -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+				Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -ExportMSCertificates -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXMaintenanceUsername $SCXMaintenanceUsername -SCXMonitoringUsername $SCXMonitoringUsername -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName -MSInfo32:$MSInfo32 -SCXWinRMCredentials $SCXWinRMCredentials -SCXWinRMEnumerateSpecificClasses:$SCXWinRMEnumerateSpecificClasses -SCXWinRMEnumerateAllClasses:$SCXWinRMEnumerateAllClasses -GetUserRoles
 			}
-			Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -SCXAgents $SCXAgents -SCXUsername $SCXUsername -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+			else
+			{
+				Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -ExportMSCertificates -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXMaintenanceUsername $SCXMaintenanceUsername -SCXMonitoringUsername $SCXMonitoringUsername -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName -MSInfo32:$MSInfo32 -SCXWinRMCredentials $SCXWinRMCredentials -SCXWinRMEnumerateSpecificClasses:$SCXWinRMEnumerateSpecificClasses -SCXWinRMEnumerateAllClasses:$SCXWinRMEnumerateAllClasses -GetUserRoles
+			}
 		}
-		Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -GPResult -ExportMPs -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles:$GetUserRoles
+		elseif ($AssumeYes)
+		{
+			Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -ExportMSCertificates -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles
+		}
+		else
+		{
+			Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -GPResult -ExportMPs -ExportMSCertificates -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles
+		}
+		
 	}
 	else
 	{
-		Start-ScomDataCollector -Servers $Servers -GetRunAsAccounts:$GetRunAsAccounts -CheckTLS:$CheckTLS -CheckCertificates:$CheckCertificates -GetEventLogs:$GetEventLogs -GetUserRoles:$GetUserRoles -GetRulesAndMonitors:$GetRulesAndMonitors -GPResult:$GPResult -ManagementServers:$ManagementServers -MSInfo32:$MSInfo32 -SQLLogs:$SQLLogs -ExportMPs:$ExportMPs -CaseNumber:$CaseNumber -GenerateHTML:$GenerateHTML -AssumeYes:$AssumeYes -NoSQLPermission:$NoSQLPermission -SQLOnly:$SQLOnly -SQLOnlyOpsDB:$SQLOnlyOpsDB -SQLOnlyDW:$SQLOnlyDW -CheckPorts:$CheckPorts -GetLocalSecurity:$GetLocalSecurity -LeastAmount:$LeastAmount -GetNotificationSubscriptions:$GetNotificationSubscriptions -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware:$GetInstalledSoftware -GetSPN:$GetSPN -SkipConnectivityTests:$SkipConnectivityTests -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -GetConfiguration:$GetConfiguration -CheckGroupPolicy:$CheckGroupPolicy -GetInstallLogs:$GetInstallLogs -BuildPipeline:$BuildPipeline -SCXAgents $SCXAgents -SCXUsername $SCXUsername
+		Start-ScomDataCollector -Servers $Servers -GetRunAsAccounts:$GetRunAsAccounts -CheckTLS:$CheckTLS -CheckCertificates:$CheckCertificates -GetEventLogs:$GetEventLogs -GetUserRoles:$GetUserRoles -GetRulesAndMonitors:$GetRulesAndMonitors -GPResult:$GPResult -ManagementServers:$ManagementServers -MSInfo32:$MSInfo32 -SQLLogs:$SQLLogs -ExportMPs:$ExportMPs -ExportMSCertificates:$ExportMSCertificates -CaseNumber:$CaseNumber -GenerateHTML:$GenerateHTML -AssumeYes:$AssumeYes -NoSQLPermission:$NoSQLPermission -SQLOnly:$SQLOnly -SQLOnlyOpsDB:$SQLOnlyOpsDB -SQLOnlyDW:$SQLOnlyDW -CheckPorts:$CheckPorts -GetLocalSecurity:$GetLocalSecurity -LeastAmount:$LeastAmount -GetNotificationSubscriptions:$GetNotificationSubscriptions -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware:$GetInstalledSoftware -GetSPN:$GetSPN -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -GetConfiguration:$GetConfiguration -CheckGroupPolicy:$CheckGroupPolicy -GetInstallLogs:$GetInstallLogs -BuildPipeline:$BuildPipeline -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXMaintenanceUsername $SCXMaintenanceUsername -SCXMonitoringUsername $SCXMonitoringUsername -SCXWinRMCredentials $SCXWinRMCredentials -SCXWinRMEnumerateSpecificClasses:$SCXWinRMEnumerateSpecificClasses -SCXWinRMEnumerateAllClasses:$SCXWinRMEnumerateAllClasses -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName
 	}
 }
 elseif (!$SQLOnly)
@@ -1675,7 +1880,7 @@ exit 1
 <#
 MIT License
 
-Copyright (c) 2023 Blake Drumm
+Copyright (c) 2024 Blake Drumm
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

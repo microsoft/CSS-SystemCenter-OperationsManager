@@ -245,17 +245,71 @@ Function Invoke-DataCollectorMenu
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							do
 							{
-								$SCXAgents = Read-Host "Type the SCX Agents (comma separated) you would like to run the Linux Data Collector against"
-								$SCXUsername = Read-Host "Type the Username to be used to gather data via SSH (preferably high user rights)"
+								if (-NOT $SCXAgents)
+								{
+									$SCXAgents = Read-Host "Type the SCX Agents (comma separated) you would like to run the Linux Data Collector against"
+								}
+								if (-NOT $SCXUsername)
+								{
+									$SCXUsername = Read-Host "Type the Username to be used to gather data via SSH (preferably high user rights)"
+								}
 							}
-							until (($SCXAgents -and $SCXUsername) -or ($SCXAgents -and $SCXUsername -and $SCXPassword))
+							until ($SCXAgents -and $SCXUsername)
+							
+							do
+							{
+								$SCXResourcePools = Read-Host "Type in the UNIX/Linux Resource Pool you want to run the WinRM queries from (comma separated for more than one)"
+							}
+							until ($SCXResourcePools)
+							do
+							{
+								$EnumerateAllSCXClasses = Read-Host "Do you want to enumerate all SCX Classes from the Linux Agent(s) with WinRM? Y/N"
+							}
+							until ($EnumerateAllSCXClasses -eq "y" -or $EnumerateAllSCXClasses -eq "n")
+							if ($EnumerateAllSCXClasses -eq "n")
+							{
+								$EnumerateAllSCXClasses = $null
+								do
+								{
+									$EnumerateSpecificSCXClasses = Read-Host "Do you want to gather specific SCX Classes ('N' will allow you to gather the default SCX Classes from the Linux Agent(s))? Y/N"
+								}
+								until ($EnumerateSpecificSCXClasses -eq "y" -or $EnumerateSpecificSCXClasses -eq "n")
+								if ($EnumerateSpecificSCXClasses -eq "y")
+								{
+									$EnumerateSpecificSCXClasses = $null
+									do
+									{
+										$EnumerateSpecificSCXClasses = Read-Host "Type in a comma separated list of SCX Classes you want to gather. Default: SCX_UnixProcess, SCX_Agent, SCX_OperatingSystem"
+									}
+									until ($EnumerateSpecificSCXClasses)
+								}
+								else
+								{
+									$EnumerateSpecificSCXClasses = 'SCX_UnixProcess', 'SCX_Agent', 'SCX_OperatingSystem'
+								}
+							}
 							if ($PermissionforSQL -like 'y')
 							{
-								Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -GetUserRoles
+								if ($SCXWinRMEnumerateAllClasses)
+								{
+									Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXWinRMEnumerateAllClasses -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName -GetUserRoles -ExportSCXCertificates
+								}
+								else
+								{
+									Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXWinRMEnumerateSpecificClasses $EnumerateSpecificSCXClasses -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName -GetUserRoles -ExportSCXCertificates
+								}
+								
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -NoSQLPermission -GetUserRoles
+								if ($SCXWinRMEnumerateAllClasses)
+								{
+									Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXWinRMEnumerateAllClasses -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName -GetUserRoles -ExportSCXCertificates -NoSQLPermission
+								}
+								else
+								{
+									Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXWinRMEnumerateSpecificClasses $EnumerateSpecificSCXClasses -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName -GetUserRoles -ExportSCXCertificates -NoSQLPermission
+								}
 							}
 							
 						}

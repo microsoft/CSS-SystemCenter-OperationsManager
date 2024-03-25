@@ -105,8 +105,38 @@ Function Get-TLSRegistryKeys
 				}
 				$localresults = "PipeLineKickStart" | Select-Object @{ n = 'Protocol'; e = { $Protocol } },
 																	@{ n = 'Type'; e = { $key } },
-																	@{ n = 'DisabledByDefault'; e = { ($IsDisabledByDefault).ToString().Replace('0', 'False').Replace('1', 'True') } },
-																	@{ n = 'IsEnabled'; e = { ($IsEnabled).ToString().Replace('0', 'False').Replace('1', 'True') } }
+																	@{ n = 'DisabledByDefault'; e = { 
+																		$output = ($IsDisabledByDefault).ToString()
+																		if ($output -eq '0')
+																		{
+																			$output.Replace('0', 'False').Replace('1', 'True') 
+																		}
+																		elseif ($output -eq '$0xffffffff')
+																		{
+																			"$output (True)"
+																		}
+																		else
+																		{
+																			$output
+																		}
+																		
+																		} },
+																	@{ n = 'IsEnabled'; e = { 
+																		$output = ($IsEnabled).ToString()
+																		if ($output -eq '0')
+																		{
+																			$output.Replace('0', 'False').Replace('1', 'True') 
+																		}
+																		elseif ($output -eq '$0xffffffff')
+																		{
+																			"$output (True)"
+																		}
+																		else
+																		{
+																			$output
+																		}
+
+																		} }
 				$finalData += $localresults
 			}
 		}

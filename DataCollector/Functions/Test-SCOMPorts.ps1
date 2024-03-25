@@ -13,7 +13,7 @@ function Invoke-TestSCOMPorts
 		[string]$OutputFile,
 		[Parameter(Position = 4)]
 		[ValidateSet("Text", "CSV", "Table")]
-		[string[]]$OutputType
+		[string[]]$OutputType = 'Table'
 	)
 	<#
 	.SYNOPSIS
@@ -38,9 +38,9 @@ function Invoke-TestSCOMPorts
 		An array of Servers, or alternatively you can pipe in objects from Get-SCOMAgent or Get-SCOMManagementServer.
 	
 	.EXAMPLE
-		PS C:\> Get-SCOMAgent | Where {$_.Name -match "IIS-server"} | .\Invoke-TestSCOMPorts
-		PS C:\> Get-SCOMManagementServer | .\Invoke-TestSCOMPorts
-		PS C:\> .\Invoke-TestSCOMPorts -Servers Agent1.contoso.com, SQL-Server.contoso.com
+		PS C:\> Get-SCOMAgent | Where {$_.Name -match "IIS-server"} | .\Test-SCOMPorts
+		PS C:\> Get-SCOMManagementServer | .\Test-SCOMPorts
+		PS C:\> .\Test-SCOMPorts -Servers Agent1.contoso.com, SQL-Server.contoso.com
 	
 	.NOTES
 		.AUTHOR
@@ -50,24 +50,33 @@ function Invoke-TestSCOMPorts
 		
 		https://www.stefanroth.net/2013/10/08/powershell-4-0-checking-scom-required-ports/
 #>
-	if ($OutputFile)
+	
+	function Correct-PathName
 	{
-		if (!$OutputType)
+		param (
+			$Path,
+			$Type
+		)
+		if ($Path -match ".")
 		{
-			$OutputType = 'Text'
+			$SplitPath = $Path.Split(".")[0]
 		}
+		else
+		{
+			$SplitPath = $Path
+		}
+		
+		if ($Type -eq 'CSV')
+		{
+			$FinalPath = "$($SplitPath).csv"
+		}
+		if ($Type -eq 'Text')
+		{
+			$FinalPath = "$($SplitPath).txt"
+		}
+		return $FinalPath
 	}
-	else
-	{
-		if ($OutputType -eq 'Text')
-		{
-			$OutputFile = "$PSScriptRoot`\SCOM-Port-Checker.txt"
-		}
-		elseif ($OutputType -eq 'CSV')
-		{
-			$OutputFile = "$PSScriptRoot`\SCOM-Port-Checker.csv"
-		}
-	}
+	
 	if (!$SourceServer)
 	{
 		$SourceServer = $env:COMPUTERNAME
@@ -84,12 +93,12 @@ function Invoke-TestSCOMPorts
 	{
 		$DestinationServer = $DestinationServer
 	}
-	Write-Console " "
-	Write-Console @"
+	Write-Output " "
+	Write-Output @"
 ================================
 Starting SCOM Port Checker
 "@
-	Write-Console "  Running function:"
+	Write-Host "  Running function:"
 	function Check-SCOMPorts
 	{
 		param
@@ -101,37 +110,9 @@ Starting SCOM Port Checker
 					   Position = 1)]
 			[array]$SourceServer
 		)
-		function Write-Console
-		{
-			param
-			(
-				[Parameter(Position = 1)]
-				[string]$Text,
-				[Parameter(Position = 2)]
-				$ForegroundColor,
-				[Parameter(Position = 3)]
-				[switch]$NoNewLine
-			)
-			
-			if ([Environment]::UserInteractive)
-			{
-				if ($ForegroundColor)
-				{
-					Write-Host $Text -ForegroundColor $ForegroundColor -NoNewLine:$NoNewLine
-				}
-				else
-				{
-					Write-Host $Text -NoNewLine:$NoNewLine
-				}
-			}
-			else
-			{
-				Write-Output $Text
-			}
-		}
 		$payload = $null
 		$payload = @()
-		Write-Console "    $env:COMPUTERNAME" -ForegroundColor Cyan -NoNewLine
+		Write-Host "    $env:COMPUTERNAME" -ForegroundColor Cyan -NoNewLine
 		$ports = @{
 			"Management Server / Agent Port"   = 5723;
 			"Web Console / Console Port"	   = 5724;
@@ -161,7 +142,7 @@ Starting SCOM Port Checker
 			{
 				$tcp = $null
 				$tcp = Test-NetConnection -Computername $server -Port $port.Value -WarningAction SilentlyContinue
-				Write-Console '-' -ForegroundColor Green -NoNewline
+				Write-Host '-' -ForegroundColor Green -NoNewline
 				Switch ($($tcp.TcpTestSucceeded))
 				{
 					True { $payload += new-object psobject -property @{ Availability = 'Up'; 'Service Name' = $($port.Name); Port = $($port.Value); SourceServer = $env:COMPUTERNAME; DestinationServer = $server } }
@@ -171,13 +152,14 @@ Starting SCOM Port Checker
 			}
 			
 		}
-		Write-Console '> Complete!' -ForegroundColor Green
+		Write-Host '> Complete!' -ForegroundColor Green
 		return $payload
 	}
+	$scriptout = $null
 	$sb = (get-item Function:Check-SCOMPorts).ScriptBlock
 	foreach ($source in $SourceServer)
 	{
-		if ($source -match $env:COMPUTERNAME)
+		if ($source -match "^$env:COMPUTERNAME")
 		{
 			$scriptout += Check-SCOMPorts -SourceServer $source -DestinationServer $DestinationServer
 		}
@@ -198,20 +180,31 @@ Starting SCOM Port Checker
 		expression = 'Port'
 		descending = $false
 	}
+	
+	if ($OutputFile)
+	{
+		if (!$OutputType)
+		{
+			$OutputType = 'Text'
+		}
+	}
+	
 	if ($OutputType -eq 'CSV')
 	{
-		#Write-Console "Output to " -NoNewline -ForegroundColor Gray
-		#Write-Console $OutputFile -NoNewline -ForegroundColor Cyan
+		#Write-Host "Output to " -NoNewline -ForegroundColor Gray
+		#Write-Host $OutputFile -NoNewline -ForegroundColor Cyan
+		$OutputFile = Correct-PathName -Path $OutputFile -Type CSV
 		$finalout | Export-Csv -Path $OutputFile -NoTypeInformation
 	}
-	elseif ($OutputType -eq 'Text')
+	if ($OutputType -eq 'Text')
 	{
-		#Write-Console "Output to " -NoNewline -ForegroundColor Gray
-		#Write-Console $OutputFile -NoNewline -ForegroundColor Cyan
-		$finalout | Format-Table * | Out-File $OutputFile
+		#Write-Host "Output to " -NoNewline -ForegroundColor Gray
+		#Write-Host $OutputFile -NoNewline -ForegroundColor Cyan
+		$OutputFile = Correct-PathName -Path $OutputFile -Type Text
+		$finalout | Format-Table * -AutoSize | Out-File $OutputFile
 	}
-	elseif ($OutputType -eq 'Table')
+	if ($OutputType -eq 'Table')
 	{
-		$finalout | Format-Table *
+		$finalout | Format-Table * -AutoSize
 	}
 }

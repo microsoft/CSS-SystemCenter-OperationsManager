@@ -178,7 +178,7 @@
 		https://github.com/blakedrumm/SCOM-Scripts-and-SQL
 		
 		.VERSION
-		v4.0.0 - March 22nd, 2024
+		v4.0.3 - April 27th, 2024
 #>
 [CmdletBinding(HelpUri = 'https://blakedrumm.com/blog/scom-data-collector/')]
 [OutputType([string])]
@@ -764,9 +764,9 @@ function Start-ScomDataCollector
 	=================================================================================
 	 Constants section - modify stuff here:
 	=================================================================================
-	$OpsDB_SQLServer = "SQL2A.opsmgr.net"
+	$script:OpsDB_SQLServer = "SQL2A.opsmgr.net"
 	$OpsDB_SQLDBName =  "OperationsManager"
-	$DW_SQLServer = "SQL2A.opsmgr.net"
+	$script:DW_SQLServer = "SQL2A.opsmgr.net"
 	$DW_SQLDBName =  "OperationsManagerDW"
 	=================================================================================
 	 Begin MAIN script section
@@ -824,11 +824,11 @@ function Start-ScomDataCollector
 		# This is a management server.  Try to get the database values.
 		$SCOMKey = "HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup"
 		$SCOMData = Get-ItemProperty $SCOMKey
-		$OpsDB_SQLServer = ($SCOMData).DatabaseServerName
-		$OpsDB_SQLServerOriginal = $OpsDB_SQLServer
+		$script:OpsDB_SQLServer = ($SCOMData).DatabaseServerName
+		$script:OpsDB_SQLServerOriginal = $script:OpsDB_SQLServer
 		$OpsDB_SQLDBName = ($SCOMData).DatabaseName
-		$DW_SQLServer = ($SCOMData).DataWarehouseDBServerName
-		$DW_SQLServerOriginal = $DW_SQLServer
+		$script:DW_SQLServer = ($SCOMData).DataWarehouseDBServerName
+		$script:DW_SQLServerOriginal = $script:DW_SQLServer
 		$DW_SQLDBName = ($SCOMData).DataWarehouseDBName
 		$mgmtserver = 1
 	}
@@ -854,21 +854,21 @@ function Start-ScomDataCollector
 		$DWDB = 'DataWarehouseDBName'
 		$reg = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey($Hive, $ComputerName)
 		$key = $reg.OpenSubKey($KeyPath)
-		$OpsDB_SQLServer = $key.GetValue($OpsDBServer)
-		$OpsDB_SQLServerOriginal = $key.GetValue($OpsDBServer)
+		$script:OpsDB_SQLServer = $key.GetValue($OpsDBServer)
+		$script:OpsDB_SQLServerOriginal = $key.GetValue($OpsDBServer)
 		$OpsDB_SQLDBName = $key.GetValue($OpsDBName)
-		$DW_SQLServer = $key.GetValue($DWServer)
-		$DW_SQLServerOriginal = $key.GetValue($DWServer)
+		$script:DW_SQLServer = $key.GetValue($DWServer)
+		$script:DW_SQLServerOriginal = $key.GetValue($DWServer)
 		$DW_SQLDBName = $key.GetValue($DWDB)
 	}
-	if (!$OpsDB_SQLServer)
+	if (!$script:OpsDB_SQLServer)
 	{
 		do
 		{
-			$OpsDB_SQLServer = read-host "Please enter the name of the Operations Manager SQL Database Server. (ex. SQL-2019\SCOM2019)"
+			$script:OpsDB_SQLServer = read-host "Please enter the name of the Operations Manager SQL Database Server. (ex. SQL-2019\SCOM2019)"
 		}
-		until ($OpsDB_SQLServer)
-		$OpsDB_SQLServerOriginal = $OpsDB_SQLServer
+		until ($script:OpsDB_SQLServer)
+		$script:OpsDB_SQLServerOriginal = $script:OpsDB_SQLServer
 	}
 	if (!$OpsDB_SQLDBName)
 	{
@@ -879,14 +879,14 @@ function Start-ScomDataCollector
 		until ($OpsDBName)
 		$OpsDB_SQLDBName = $OpsDBName
 	}
-	if (!$DW_SQLServer)
+	if (!$script:DW_SQLServer)
 	{
 		do
 		{
-			$DW_SQLServer = read-host "Please enter the name of the Operations Manager Data Warehouse SQL Server Name. (ex. SQL-2019\SCOM2019)"
+			$script:DW_SQLServer = read-host "Please enter the name of the Operations Manager Data Warehouse SQL Server Name. (ex. SQL-2019\SCOM2019)"
 		}
-		until ($DW_SQLServer)
-		$DW_SQLServerOriginal = $DW_SQLServer
+		until ($script:DW_SQLServer)
+		$script:DW_SQLServerOriginal = $script:DW_SQLServer
 	}
 	if (!$DW_SQLDBName)
 	{
@@ -916,7 +916,7 @@ function Start-ScomDataCollector
 			Write-Console "Moving stuff around and zipping everything up for easy transport" -ForegroundColor Gray
 			. $ScriptPath`\Functions\Wrapping-Up.ps1
 			Invoke-WrapUp -BuildPipeline:$BuildPipeline
-			Write-Console "`nScript has completed!`n" -ForegroundColor Green -NoNewline
+			Write-Console "`n---Script has completed!`n" -ForegroundColor Green -NoNewline
 			Start-Sleep -Seconds 1
 			Start-Process C:\Windows\explorer.exe -ArgumentList "/select, $script:destfile"
 			break
@@ -930,30 +930,30 @@ function Start-ScomDataCollector
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 1%" -PercentComplete 1
 	
 	#$TLSservers = import-csv $OutputPath\ManagementServers.csv
-	if (!$ManagementServers)
+	if (!$script:ManagementServers)
 	{
 		try
 		{
-			$ManagementServers = Get-SCOMManagementServer -ErrorAction Stop | Where-Object { $_.IsGateway -eq $false } | Sort-Object DisplayName -Descending | Select-Object DisplayName -ExpandProperty DisplayName -Unique
+			$script:ManagementServers = Get-SCOMManagementServer -ErrorAction Stop | Where-Object { $_.IsGateway -eq $false } | Sort-Object DisplayName -Descending | Select-Object DisplayName -ExpandProperty DisplayName -Unique
 		}
 		catch
 		{
-			$ManagementServers = import-csv $OutputPath\ManagementServers.csv | Where-Object { $_.IsGateway -eq $false } | Sort-Object DisplayName -Descending | Select-Object DisplayName -ExpandProperty DisplayName -Unique
+			$script:ManagementServers = import-csv $OutputPath\ManagementServers.csv | Where-Object { $_.IsGateway -eq $false } | Sort-Object DisplayName -Descending | Select-Object DisplayName -ExpandProperty DisplayName -Unique
 		}
 	}
-	if (-NOT ($ManagementServers))
+	if (-NOT ($script:ManagementServers))
 	{
 		"$(Invoke-TimeStamp)Unable to detect any Management Servers with the `'Get-SCOMManagementServer`' command and the SQL Query to return Management Servers. Setting the `$ManagementServer variable to $env:COMPUTERNAME (local machine)." | Out-File $OutputPath\Error.log -Append
-		$ManagementServers = $env:COMPUTERNAME
+		$script:ManagementServers = $env:COMPUTERNAME
 	}
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 2%" -PercentComplete 2
-	[string[]]$TLSservers = $ManagementServers
+	[string[]]$TLSservers = $script:ManagementServers
 	
-	[string[]]$TLSservers += ($DW_SQLServer.Split('\')[0]).Split(',')[0]
+	[string[]]$TLSservers += ($script:DW_SQLServer.Split('\')[0]).Split(',')[0]
 	
-	[string[]]$TLSservers += ($OpsDB_SQLServer.Split('\')[0]).Split(',')[0]
+	[string[]]$TLSservers += ($script:OpsDB_SQLServer.Split('\')[0]).Split(',')[0]
 	
-	[string[]]$TestedTLSservers = @()
+	[string[]]$script:TestedTLSservers = @()
 	if (!$SkipConnectivityTests)
 	{
 		$pathtestOpsMgr = Test-Path -Path $OutputPath\SQL_Primary_Replicas_OpsMgr.csv
@@ -1037,7 +1037,7 @@ function Start-ScomDataCollector
 				Write-Console "    Successfully Executed Powershell Invoke Command : $Rsrv" -ForegroundColor Green
 				if ($shareAccessible)
 				{
-					$TestedTLSservers += $Rsrv.Split(",")
+					$script:TestedTLSservers += $Rsrv.Split(",")
 				}
 			}
 			else
@@ -1048,11 +1048,11 @@ function Start-ScomDataCollector
 				continue
 			}
 		}
-		$TestedTLSservers = $TestedTLSservers | Select-Object -Unique | Sort-Object
+		$script:TestedTLSservers = $script:TestedTLSservers | Select-Object -Unique | Sort-Object
 		$templist = @()
-		foreach ($server in $TestedTLSservers)
+		foreach ($server in $script:TestedTLSservers)
 		{
-			foreach ($ManagementServer in $ManagementServers)
+			foreach ($ManagementServer in $script:ManagementServers)
 			{
 				if ($server -match "^$ManagementServer")
 				{
@@ -1060,12 +1060,12 @@ function Start-ScomDataCollector
 				}
 			}
 		}
-		$OriginalManagementServers = $ManagementServers | Select-Object -Unique | Sort-Object
-		$ManagementServers = $templist
+		$OriginalManagementServers = $script:ManagementServers | Select-Object -Unique | Sort-Object
+		$script:ManagementServers = $templist
 	}
 	else
 	{
-		$TestedTLSservers = $TLSservers | Select-Object -Unique
+		$script:TestedTLSservers = $TLSservers | Select-Object -Unique
 	}
 	#region Linux Agent Gather Script
 	if ($SCXAgents)
@@ -1120,9 +1120,9 @@ function Start-ScomDataCollector
 				Write-Console "================================`nGathering RunAs Accounts"
 				. $ScriptPath`\Functions\Get-RunasAccount.ps1
 				Write-Console "  Gathering from: " -NoNewline -ForegroundColor Gray
-				Write-Console $ManagementServers[0] -NoNewline -ForegroundColor Cyan
+				Write-Console $script:ManagementServers[0] -NoNewline -ForegroundColor Cyan
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 7%" -PercentComplete 7
-				Get-SCOMRunasAccount -ManagementServer $ManagementServers[0]
+				Get-SCOMRunasAccount -ManagementServer $script:ManagementServers[0]
 				Write-Output " "
 			}
 		}
@@ -1142,7 +1142,7 @@ function Start-ScomDataCollector
 				. $ScriptPath`\Functions\Certificate-Check.ps1
 				New-Item -ItemType Directory -Path "$OutputPath\Certificates" -Force -ErrorAction Stop | Out-Null
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 9%" -PercentComplete 9
-				foreach ($CertChkSvr in $TestedTLSservers)
+				foreach ($CertChkSvr in $script:TestedTLSservers)
 				{
 					Invoke-SCOMCertificateChecker -Servers $CertChkSvr -OutputFile $OutputPath\Certificates\$CertChkSvr.CertificateInfo.txt
 				}
@@ -1153,7 +1153,7 @@ function Start-ScomDataCollector
 				Write-Output "================================`nExporting Management Server Certificates"
 				. $ScriptPath`\Functions\Export-SCOMMSCertificate.ps1
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 10%" -PercentComplete 10
-				Export-SCOMMSCertificate -Servers $TestedTLSservers -ExportPath $OutputPath\Certificates
+				Export-SCOMMSCertificate -Servers $script:TestedTLSservers -ExportPath $OutputPath\Certificates
 			}
 		}
 		catch
@@ -1171,7 +1171,7 @@ function Start-ScomDataCollector
 				. $ScriptPath`\Functions\Get-InstalledSoftware.ps1
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 11%" -PercentComplete 11
 				# Get Installed Software
-				$installedsoftware = Invoke-GetInstalledSoftware -Servers $TestedTLSservers
+				$installedsoftware = Invoke-GetInstalledSoftware -Servers $script:TestedTLSservers
 				$installedsoftware | Format-Table * -AutoSize | Out-String -Width 4096 | Out-File "$OutputPath\Installed-Software.txt"
 				$installedsoftware | Export-Csv -Path "$OutputPath\Installed-Software.csv" -NoTypeInformation
 			}
@@ -1238,7 +1238,7 @@ function Start-ScomDataCollector
 				. $ScriptPath`\Functions\Get-TLSRegKeys.ps1
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 13%" -PercentComplete 13
 				# This will be updated with CipherSuite checks at some point
-				Get-TLSRegistryKeys -Servers $TestedTLSservers |
+				Get-TLSRegistryKeys -Servers $script:TestedTLSservers |
 				Out-File $OutputPath\TLS-RegistryKeys.txt
 			}
 		}
@@ -1256,7 +1256,7 @@ function Start-ScomDataCollector
 				Write-Output " "
 				Write-Output "================================`nGathering Management Server Configuration"
 				. $ScriptPath`\Functions\Get-Configuration.ps1
-				Get-SCOMConfiguration -Servers $ManagementServers
+				Get-SCOMConfiguration -Servers $script:ManagementServers
 			}
 		}
 		catch
@@ -1287,7 +1287,7 @@ function Start-ScomDataCollector
 					Write-Console "    Folder Created: $OutputPath\Event Logs" -ForegroundColor Gray
 				}
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 18%" -PercentComplete 18
-				foreach ($ElogServer in $TestedTLSservers)
+				foreach ($ElogServer in $script:TestedTLSservers)
 				{
 					
 					if ($AdditionalEventLogs)
@@ -1361,7 +1361,7 @@ function Start-ScomDataCollector
 				Write-Console "================================`nGathering Rules and Monitors"
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 25%" -PercentComplete 25
 				. $ScriptPath`\Functions\Get-RulesAndMonitors.ps1
-				Get-RulesAndMonitors -OutputDirectory $OutputPath -ManagementServer $ManagementServers[0]
+				Get-RulesAndMonitors -OutputDirectory $OutputPath -ManagementServer $script:ManagementServers[0]
 				Write-Output " "
 			}
 		}
@@ -1380,7 +1380,7 @@ function Start-ScomDataCollector
 				Write-Console "====================================================================`nGathering the Local Security Policies & Local Administrators Group"
 				. $ScriptPath`\Functions\Get-LocalUserAccountsRights.ps1
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 27%" -PercentComplete 27
-				Get-LocalUserAccountsRights -Servers $TestedTLSservers
+				Get-LocalUserAccountsRights -Servers $script:TestedTLSservers
 			}
 		}
 		catch
@@ -1396,7 +1396,7 @@ function Start-ScomDataCollector
 			{
 				. $ScriptPath`\Functions\Test-SCOMPorts.ps1
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 32%" -PercentComplete 32
-				Invoke-TestSCOMPorts -SourceServer $TestedTLSservers -DestinationServer $env:COMPUTERNAME -OutputFile $OutputPath\Port_Checker.txt -OutputType CSV, Text
+				Invoke-TestSCOMPorts -SourceServer $script:TestedTLSservers -DestinationServer $env:COMPUTERNAME -OutputFile $OutputPath\Port_Checker.txt -OutputType CSV, Text
 			}
 		}
 		catch
@@ -1456,7 +1456,7 @@ function Start-ScomDataCollector
 						
 						mkdir "$OutputPath`\SQL Logs" | out-null
 						$SQLOMLogLoc = Import-Csv $OutputPath\SQL_ErrorLogLocation_OpsDB.csv -ErrorAction Stop
-						if ($DW_SQLServer -ne $opsdb_SQLServer)
+						if ($script:DW_SQLServer -ne $script:OpsDB_SQLServer)
 						{
 							$SQLDWLogLoc = Import-Csv $OutputPath\SQL_ErrorLogLocation_DW.csv -ErrorAction Stop
 						}
@@ -1479,31 +1479,31 @@ function Start-ScomDataCollector
 						}
 						Write-Progress -Activity "Collection Running" -Status "Progress-> 41%" -PercentComplete 41
 						
-						if ($OpsDB_SQLServer -ne $DW_SQLServer)
+						if ($script:OpsDB_SQLServer -ne $script:DW_SQLServer)
 						{
 							mkdir "$OutputPath`\SQL Logs\OperationsManager" | out-null
 							mkdir "$OutputPath`\SQL Logs\DataWarehouse" | out-null
 							Write-Console "  Copying " -NoNewline -ForegroundColor Cyan
 							Write-Console "$OpsDB_SQLDBName" -NoNewline -ForegroundColor Magenta
 							Write-Console " Database SQL Logs from " -NoNewline -ForegroundColor Cyan
-							Write-Console "$OpsDB_SQLServer" -ForegroundColor Magenta
-							Copy-Item -path \\$OpsDB_SQLServer\$SQLOMLogLoc -Destination "$OutputPath`\SQL Logs\OperationsManager" -Exclude *.MDMP, *.dmp, *.trc, *.txt | Out-Null # exclude *.trc *.dmp *.mdmp
+							Write-Console "$script:OpsDB_SQLServer" -ForegroundColor Magenta
+							Copy-Item -path \\$script:OpsDB_SQLServer\$SQLOMLogLoc -Destination "$OutputPath`\SQL Logs\OperationsManager" -Exclude *.MDMP, *.dmp, *.trc, *.txt | Out-Null # exclude *.trc *.dmp *.mdmp
 							Write-Console "    Copying " -NoNewline -ForegroundColor Cyan
 							Write-Console "$DW_SQLDBName" -NoNewline -ForegroundColor Magenta
 							Write-Console " Database SQL Logs from " -NoNewline -ForegroundColor Cyan
-							Write-Console "$DW_SQLServer" -NoNewline -ForegroundColor Magenta
-							Copy-Item -path \\$DW_SQLServer\$SQLDWLogLoc -Destination "$OutputPath`\SQL Logs\DataWarehouse" -Exclude *.MDMP, *.dmp, *.trc, *.txt | Out-Null # exclude *.trc *.dmp *.mdmp
+							Write-Console "$script:DW_SQLServer" -NoNewline -ForegroundColor Magenta
+							Copy-Item -path \\$script:DW_SQLServer\$SQLDWLogLoc -Destination "$OutputPath`\SQL Logs\DataWarehouse" -Exclude *.MDMP, *.dmp, *.trc, *.txt | Out-Null # exclude *.trc *.dmp *.mdmp
 						}
 						Write-Progress -Activity "Collection Running" -Status "Progress-> 42%" -PercentComplete 42
-						if ($OpsDB_SQLServer -eq $DW_SQLServer)
+						if ($script:OpsDB_SQLServer -eq $script:DW_SQLServer)
 						{
 							Write-Console "  Copying " -NoNewline -ForegroundColor Cyan
 							Write-Console "$OpsDB_SQLDBName" -NoNewline -ForegroundColor Magenta
 							Write-Console " & " -NoNewline -ForegroundColor Cyan
 							Write-Console "$DW_SQLDBName" -NoNewline -ForegroundColor Magenta
 							Write-Console " Database SQL Logs from " -NoNewline -ForegroundColor Cyan
-							Write-Console "$OpsDB_SQLServer" -ForegroundColor Magenta
-							Copy-Item -path \\$OpsDB_SQLServer\$SQLOMLogLoc -Destination "$OutputPath`\SQL Logs\" | Out-Null
+							Write-Console "$script:OpsDB_SQLServer" -ForegroundColor Magenta
+							Copy-Item -path \\$script:OpsDB_SQLServer\$SQLOMLogLoc -Destination "$OutputPath`\SQL Logs\" | Out-Null
 						}
 						Write-Progress -Activity "Collection Running" -Status "Progress-> 43%" -PercentComplete 43
 					}
@@ -1529,7 +1529,7 @@ function Start-ScomDataCollector
 				Write-Console "================================`nGathering Operations Manager Install Logs"
 				. $ScriptPath`\Functions\Get-InstallLogs.ps1
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 46%" -PercentComplete 46
-				Invoke-GetInstallLogs -Servers $TestedTLSservers
+				Invoke-GetInstallLogs -Servers $script:TestedTLSservers
 			}
 		}
 		catch
@@ -1545,7 +1545,7 @@ function Start-ScomDataCollector
 			{
 				write-output " "
 				Write-Console "================================`nGathering Group Policy Result"
-				foreach ($gpserver in $TestedTLSservers)
+				foreach ($gpserver in $script:TestedTLSservers)
 				{
 					try
 					{
@@ -1604,7 +1604,7 @@ function Start-ScomDataCollector
 				write-output " "
 				Write-Console "================================`nVerifying Group Policy Update / Gathering Results"
 				. $ScriptPath`\Functions\Check-GroupPolicy.ps1
-				Check-GroupPolicy -Servers $TestedTLSservers
+				Check-GroupPolicy -Servers $script:TestedTLSservers
 				Write-Progress -Activity "Collection Running" -Status "Progress-> 59%" -PercentComplete 59
 			}
 		}
@@ -1653,16 +1653,16 @@ function Start-ScomDataCollector
 	$error.clear()
 	try
 	{
-		if (!$ManagementServers)
+		if (!$script:ManagementServers)
 		{
-			$ManagementServers = $OriginalManagementServers | Select-Object * -Unique
+			$script:ManagementServers = $OriginalManagementServers | Select-Object * -Unique
 		}
-		foreach ($ManagementServer in $ManagementServers)
+		foreach ($ManagementServer in $script:ManagementServers)
 		{
 			if ($ManagementServer -notmatch $env:COMPUTERNAME)
 			{
-				$pendingMgmtCurrentServer = $ManagementServers[0]
-				$pendingMgmt = Invoke-Command -ComputerName $ManagementServers[0] -ScriptBlock { Import-Module OperationsManager; return Get-SCOMPendingManagement }
+				$pendingMgmtCurrentServer = $script:ManagementServers[0]
+				$pendingMgmt = Invoke-Command -ComputerName $script:ManagementServers[0] -ScriptBlock { Import-Module OperationsManager; return Get-SCOMPendingManagement }
 				continue
 			}
 			else
@@ -1722,7 +1722,7 @@ function Start-ScomDataCollector
 		. $ScriptPath`\Functions\General-Info.ps1
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 66%" -PercentComplete 66
 		Write-Verbose "$(Invoke-TimeStamp)Executing General Info Function"
-		Get-SCOMGeneralInfo -Servers $TestedTLSservers
+		Get-SCOMGeneralInfo -Servers $script:TestedTLSservers
 		Write-Console "> Completed!`n" -NoNewline -ForegroundColor Green
 		Write-Progress -Activity "Collection Running" -Status "Progress-> 97%" -PercentComplete 97
 	}
@@ -1737,7 +1737,7 @@ function Start-ScomDataCollector
 		try
 		{
 			Write-Output "================================`nChecking Environment for Best Practices"
-			Invoke-GetBestPractices -Servers $ManagementServers
+			Invoke-GetBestPractices -Servers $script:ManagementServers
 		}
 		catch
 		{
@@ -1771,7 +1771,7 @@ function Start-ScomDataCollector
 			Write-Output "`n================================`nGathering Management Server SCX Certificates"
 			Write-Console "  Executing Function" -NoNewLine -ForegroundColor Cyan
 			Write-Console "-" -NoNewline -ForegroundColor Green
-			Export-SCXCertificate -OutputDirectory "$OutputPath\Management Server SCX Certificates" -ComputerName $ManagementServers
+			Export-SCXCertificate -OutputDirectory "$OutputPath\Management Server SCX Certificates" -ComputerName $script:ManagementServers
 			Write-Console "-" -NoNewline -ForegroundColor Green
 		}
 		catch
@@ -1810,7 +1810,7 @@ function Start-ScomDataCollector
 	. $ScriptPath`\Functions\Wrapping-Up.ps1
 	Invoke-WrapUp -BuildPipeline:$BuildPipeline
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 100%" -PercentComplete 100
-	Write-Console " -Script has completed" -ForegroundColor Green -NoNewline
+	Write-Console "---Script has completed" -ForegroundColor Green -NoNewline
 	$x = 1
 	do { $x++; Write-Console "." -NoNewline -ForegroundColor Green; Start-Sleep -Millisecond 50 }
 	until ($x -eq 4)
@@ -1818,7 +1818,7 @@ function Start-ScomDataCollector
 	exit 0
 }
 
-if ($BuildPipeline -or $CheckTLS -or $CheckCertificates -or $GetEventLogs -or $MSInfo32 -or $AssumeYes -or $ExportMPs -or $ExportMSCertificates -or $CaseNumber -or $Servers -or $GenerateHTML -or $GetRulesAndMonitors -or $GetRunAsAccounts -or $All -or $GPResult -or $SQLLogs -or $NoSQLPermission -or $SQLOnly -or $SQLOnlyOpsDB -or $SQLOnlyDW -or $CheckPorts -or $GetLocalSecurity -or $LeastAmount -or $GetNotificationSubscriptions -or $AdditionalEventLogs -or $GetInstalledSoftware -or $GetSPN -or $ManagementServers -or $SkipBestPracticeAnalyzer -or $SkipConnectivityTests -or $GetConfiguration -or $SkipGeneralInformation -or $ExportSCXCertificates -or $SkipSQLQueries -or $CheckGroupPolicy -or $GetInstallLogs -or $SCXAgents -or $SCXUsername -or $SCXMaintenanceUsername -or $SCXMonitoringUsername -or $SCXWinRMCredentials -or $SCXWinRMEnumerateAllClasses -or $SCXResourcePoolDisplayName -or $GetUserRoles)
+if ($BuildPipeline -or $CheckTLS -or $CheckCertificates -or $GetEventLogs -or $MSInfo32 -or $AssumeYes -or $ExportMPs -or $ExportMSCertificates -or $CaseNumber -or $Servers -or $GenerateHTML -or $GetRulesAndMonitors -or $GetRunAsAccounts -or $All -or $GPResult -or $SQLLogs -or $NoSQLPermission -or $SQLOnly -or $SQLOnlyOpsDB -or $SQLOnlyDW -or $CheckPorts -or $GetLocalSecurity -or $LeastAmount -or $GetNotificationSubscriptions -or $AdditionalEventLogs -or $GetInstalledSoftware -or $GetSPN -or $script:ManagementServers -or $SkipBestPracticeAnalyzer -or $SkipConnectivityTests -or $GetConfiguration -or $SkipGeneralInformation -or $ExportSCXCertificates -or $SkipSQLQueries -or $CheckGroupPolicy -or $GetInstallLogs -or $SCXAgents -or $SCXUsername -or $SCXMaintenanceUsername -or $SCXMonitoringUsername -or $SCXWinRMCredentials -or $SCXWinRMEnumerateAllClasses -or $SCXResourcePoolDisplayName -or $GetUserRoles -or $PingAll)
 {
 	if ($all)
 	{
@@ -1846,17 +1846,17 @@ if ($BuildPipeline -or $CheckTLS -or $CheckCertificates -or $GetEventLogs -or $M
 		}
 		elseif ($AssumeYes)
 		{
-			Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -ExportMSCertificates -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles
+			Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -ExportMSCertificates -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -AssumeYes -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles
 		}
 		else
 		{
-			Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -GPResult -ExportMPs -ExportMSCertificates -SQLLogs -CheckPorts -GetLocalSecurity -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles
+			Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -GPResult -ExportMPs -ExportMSCertificates -SQLLogs -CheckPorts -GetLocalSecurity -PingAll -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware -GetSPN -ManagementServers:$ManagementServers -GetConfiguration -CheckGroupPolicy -GetInstallLogs -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -MSInfo32:$MSInfo32 -GetUserRoles
 		}
 		
 	}
 	else
 	{
-		Start-ScomDataCollector -Servers $Servers -GetRunAsAccounts:$GetRunAsAccounts -CheckTLS:$CheckTLS -CheckCertificates:$CheckCertificates -GetEventLogs:$GetEventLogs -GetUserRoles:$GetUserRoles -GetRulesAndMonitors:$GetRulesAndMonitors -GPResult:$GPResult -ManagementServers:$ManagementServers -MSInfo32:$MSInfo32 -SQLLogs:$SQLLogs -ExportMPs:$ExportMPs -ExportMSCertificates:$ExportMSCertificates -CaseNumber:$CaseNumber -GenerateHTML:$GenerateHTML -AssumeYes:$AssumeYes -NoSQLPermission:$NoSQLPermission -SQLOnly:$SQLOnly -SQLOnlyOpsDB:$SQLOnlyOpsDB -SQLOnlyDW:$SQLOnlyDW -CheckPorts:$CheckPorts -GetLocalSecurity:$GetLocalSecurity -LeastAmount:$LeastAmount -GetNotificationSubscriptions:$GetNotificationSubscriptions -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware:$GetInstalledSoftware -GetSPN:$GetSPN -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -GetConfiguration:$GetConfiguration -CheckGroupPolicy:$CheckGroupPolicy -GetInstallLogs:$GetInstallLogs -BuildPipeline:$BuildPipeline -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXMaintenanceUsername $SCXMaintenanceUsername -SCXMonitoringUsername $SCXMonitoringUsername -SCXWinRMCredentials $SCXWinRMCredentials -SCXWinRMEnumerateSpecificClasses:$SCXWinRMEnumerateSpecificClasses -SCXWinRMEnumerateAllClasses:$SCXWinRMEnumerateAllClasses -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName
+		Start-ScomDataCollector -Servers $Servers -GetRunAsAccounts:$GetRunAsAccounts -CheckTLS:$CheckTLS -CheckCertificates:$CheckCertificates -GetEventLogs:$GetEventLogs -GetUserRoles:$GetUserRoles -GetRulesAndMonitors:$GetRulesAndMonitors -GPResult:$GPResult -ManagementServers:$ManagementServers -MSInfo32:$MSInfo32 -SQLLogs:$SQLLogs -ExportMPs:$ExportMPs -ExportMSCertificates:$ExportMSCertificates -CaseNumber:$CaseNumber -GenerateHTML:$GenerateHTML -AssumeYes:$AssumeYes -NoSQLPermission:$NoSQLPermission -SQLOnly:$SQLOnly -SQLOnlyOpsDB:$SQLOnlyOpsDB -SQLOnlyDW:$SQLOnlyDW -CheckPorts:$CheckPorts -GetLocalSecurity:$GetLocalSecurity -PingAll:$PingAll -LeastAmount:$LeastAmount -GetNotificationSubscriptions:$GetNotificationSubscriptions -AdditionalEventLogs $AdditionalEventLogs -GetInstalledSoftware:$GetInstalledSoftware -GetSPN:$GetSPN -SkipConnectivityTests:$SkipConnectivityTests -ExportSCXCertificates:$ExportSCXCertificates -SkipBestPracticeAnalyzer:$SkipBestPracticeAnalyzer -SkipGeneralInformation:$SkipGeneralInformation -SkipSQLQueries:$SkipSQLQueries -GetConfiguration:$GetConfiguration -CheckGroupPolicy:$CheckGroupPolicy -GetInstallLogs:$GetInstallLogs -BuildPipeline:$BuildPipeline -SCXAgents $SCXAgents -SCXUsername $SCXUsername -SCXMaintenanceUsername $SCXMaintenanceUsername -SCXMonitoringUsername $SCXMonitoringUsername -SCXWinRMCredentials $SCXWinRMCredentials -SCXWinRMEnumerateSpecificClasses:$SCXWinRMEnumerateSpecificClasses -SCXWinRMEnumerateAllClasses:$SCXWinRMEnumerateAllClasses -SCXResourcePoolDisplayName $SCXResourcePoolDisplayName
 	}
 }
 elseif (!$SQLOnly)

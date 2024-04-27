@@ -1193,11 +1193,11 @@ public class OpsMgrSetupRegKey{
 				# SCOM Version
 				$scomVersion | Add-Member -MemberType NoteProperty -Name '(Management Server) Management Group Name' -Value $ManagementGroup
 			}
-			if ($ManagementServers)
+			if ($script:ManagementServers)
 			{
-				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Management Servers in Management Group' -Value (($ManagementServers | Sort-Object) -join ", ")
+				$setupOutput | Add-Member -MemberType NoteProperty -Name 'Management Servers in Management Group' -Value (($script:ManagementServers | Sort-Object) -join ", ")
 				# SCOM Version
-				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Management Servers in Management Group' -Value (($ManagementServers | Sort-Object) -join ", ")
+				$scomVersion | Add-Member -MemberType NoteProperty -Name 'Management Servers in Management Group' -Value (($script:ManagementServers | Sort-Object) -join ", ")
 			}
 			if ($OMSList)
 			{
@@ -1805,7 +1805,7 @@ public class OpsMgrSetupRegKey{
 "@ | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
 	$localpath = (get-itemproperty -path "HKLM:\SOFTWARE\Microsoft\Microsoft Operations Manager\3.0\Setup" -ErrorAction Stop).InstallDirectory
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 80%" -PercentComplete 85
-	foreach ($server in $ManagementServers)
+	foreach ($server in $script:ManagementServers)
 	{
 		Write-Console "-" -NoNewline -ForegroundColor Green
 		if ($server -notmatch $env:COMPUTERNAME)
@@ -1962,14 +1962,13 @@ public class OpsMgrSetupRegKey{
 =------- Latency Check --------=
 ================================
 "@ | Out-File -FilePath "$OutputPath\General Information.txt" -Append -Width 4096
-	$OpsDBServer = $OpsDB_SQLServer
-	$DWDBServer = $DW_SQLServer
-	foreach ($ms in $ManagementServers) #Go Through each Management Server
+$msList = $script:ManagementServers
+	foreach ($ms in $msList) #Go through each Management Server
 	{
 		$pingoutput = @()
-		if ($ms -notmatch $Comp) #If not equal local
+		if ($ms.Split(".")[0] -notmatch $Comp.Split(".")[0]) #If not equal local
 		{
-			if ($OpsDBServer -notmatch $DWDBServer) #If OpsDB and DW are not the same run the below
+			if ($script:OpsDB_SQLServer -notmatch $script:DW_SQLServer) #If OpsDB and DW are not the same run the below
 			{
 				try
 				{
@@ -1978,11 +1977,11 @@ public class OpsMgrSetupRegKey{
 						try
 						{
 							$test = @()
-							$test = (Test-Connection -ComputerName $using:OpsDBServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).average
+							$test = (Test-Connection -ComputerName $using:OpsDB_SQLServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).Average
 							$response = @()
 							$response = ($test -as [int])
 							$innerdata = @()
-							[string]$innerdata = "$using:ms -> $using:OpsDBServer : $response ms"
+							[string]$innerdata = "$using:ms -> $using:OpsDB_SQLServer : $response ms"
 							$dataoutput += $innerdata
 						}
 						catch
@@ -1992,11 +1991,11 @@ public class OpsMgrSetupRegKey{
 						try
 						{
 							$test = @()
-							$test = (Test-Connection -ComputerName $using:DWDBServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).average
+							$test = (Test-Connection -ComputerName $using:DW_SQLServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).Average
 							$response = @()
 							$response = ($test -as [int])
 							$innerdata = @()
-							[string]$innerdata = "$using:ms -> $using:DWDBServer : $response ms"
+							[string]$innerdata = "$using:ms -> $using:DW_SQLServer : $response ms"
 							$dataoutput += $innerdata
 						}
 						catch
@@ -2006,10 +2005,10 @@ public class OpsMgrSetupRegKey{
 						# Run Checks Against Management Servers
 						try
 						{
-							foreach ($mgmtserver in $using:ManagementServers)
+							foreach ($mgmtserver in $using:msList)
 							{
 								$test = @()
-								$test = (Test-Connection -ComputerName $mgmtserver -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).average
+								$test = (Test-Connection -ComputerName $mgmtserver -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).Average
 								$response = @()
 								$response = ($test -as [int])
 								$innerdata = @()
@@ -2039,11 +2038,11 @@ public class OpsMgrSetupRegKey{
 						try
 						{
 							$test = @()
-							$test = (Test-Connection -ComputerName $using:OpsDBServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).average
+							$test = (Test-Connection -ComputerName $using:OpsDB_SQLServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).Average
 							$response = @()
 							$response = ($test -as [int])
 							$innerdata = @()
-							[string]$innerdata = "$using:ms -> $using:OpsDBServer : $response ms"
+							[string]$innerdata = "$using:ms -> $using:OpsDB_SQLServer : $response ms"
 							$dataoutput += $innerdata
 						}
 						catch
@@ -2061,16 +2060,16 @@ public class OpsMgrSetupRegKey{
 		} #end If not equal local
 		else #Local Execution
 		{
-			if ($OpsDBServer -ne $DWDBServer)
+			if ($script:OpsDB_SQLServer -ne $script:DW_SQLServer)
 			{
 				try
 				{
 					$test = @()
-					$test = (Test-Connection -ComputerName $OpsDBServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).average
+					$test = (Test-Connection -ComputerName $script:OpsDB_SQLServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).Average
 					$response = @()
 					$response = ($test -as [int])
 					$innerdata = @()
-					[string]$innerdata = "$ms -> $OpsDBServer : $response ms"
+					[string]$innerdata = "$ms -> $script:OpsDB_SQLServer : $response ms"
 					$innerdata | Out-File -FilePath "$OutputPath\General Information.txt" -Append
 				}
 				catch
@@ -2081,11 +2080,11 @@ public class OpsMgrSetupRegKey{
 				try
 				{
 					$test = @()
-					$test = (Test-Connection -ComputerName $DWDBServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).average
+					$test = (Test-Connection -ComputerName $script:DW_SQLServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).Average
 					$response = @()
 					$response = ($test -as [int])
 					$innerdata = @()
-					[string]$innerdata = "$ms -> $DWDBServer : $response ms"
+					[string]$innerdata = "$ms -> $script:DW_SQLServer : $response ms"
 					$innerdata | Out-File -FilePath "$OutputPath\General Information.txt" -Append
 				}
 				catch
@@ -2098,11 +2097,11 @@ public class OpsMgrSetupRegKey{
 				try
 				{
 					$test = @()
-					$test = (Test-Connection -ComputerName $OpsDBServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).average
+					$test = (Test-Connection -ComputerName $script:OpsDB_SQLServer -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).Average
 					$response = @()
 					$response = ($test -as [int])
 					$innerdata = @()
-					[string]$innerdata = "$ms -> $OpsDBServer : $response ms"
+					[string]$innerdata = "$ms -> $script:OpsDB_SQLServer : $response ms"
 					$innerdata | Out-File -FilePath "$OutputPath\General Information.txt" -Append
 				}
 				catch
@@ -2115,22 +2114,30 @@ public class OpsMgrSetupRegKey{
 	Write-Progress -Activity "Collection Running" -Status "Progress-> 94%" -PercentComplete 94
 	if ($pingall)
 	{
-		foreach ($server in $TestedTLSservers)
+		Write-Verbose "Starting Ping All Gathering"
+		foreach ($server in $script:TestedTLSservers)
 		{
 			Invoke-Command -ComputerName $server -ErrorAction SilentlyContinue -ScriptBlock {
+				$innerdata = @()
+
 				#Start Checking for Connectivity to Management Servers in MG
-				$pingoutput = @()
-				foreach ($ms in $using:ManagementServers)
+				Write-Verbose "Current Machine: $env:COMPUTERNAME"
+				foreach ($ms in $using:msList)
 				{
-					if ($ms -eq $env:COMPUTERNAME) { continue }
+					# Skip if testing to the same server that is running this script
+					if (($using:server).Split(".")[0] -eq $env:COMPUTERNAME -and ($ms).Split(".")[0] -eq $env:COMPUTERNAME)
+					{
+						Write-Verbose "  Local Server detected: $env:COMPUTERNAME"
+						continue 
+					}
 					try
 					{
+						Write-Verbose "  Current Management Server: $ms"
 						$test = @()
-						$test = (Test-Connection -ComputerName $ms -Count 4 | measure-Object -Property ResponseTime -Average).average
+						$test = (Test-Connection -ComputerName $ms -Count 4 -ErrorAction Stop | measure-Object -Property ResponseTime -Average).Average
 						$response = @()
 						$response = ($test -as [int])
-						$innerdata = @()
-						[string]$innerdata = "$using:server -> $ms : $response ms"
+						$innerdata += "$using:server -> $ms : $response ms"
 					}
 					catch
 					{

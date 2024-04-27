@@ -260,36 +260,36 @@ Function Invoke-SQLQueries
   function Invoke-SqlCommand { ${Function:Invoke-SQLCommand} } 
 "@)
 	## strip fqdn etc...
-	If ($OpsDB_SQLServerOriginal -like "*,*")
+	If ($script:OpsDB_SQLServerOriginal -like "*,*")
 	{
-		$OpsDB_SQLServer = $OpsDB_SQLServerOriginal.split(',')[0]
-		$OpsDB_SQLServerPort = $OpsDB_SQLServerOriginal.split(',')[1]
+		$script:OpsDB_SQLServer = $script:OpsDB_SQLServerOriginal.split(',')[0]
+		$script:OpsDB_SQLServerPort = $script:OpsDB_SQLServerOriginal.split(',')[1]
 	}
-	elseif ($OpsDB_SQLServerOriginal -like "*\*")
+	elseif ($script:OpsDB_SQLServerOriginal -like "*\*")
 	{
-		$OpsDB_SQLServer = $OpsDB_SQLServerOriginal.split('\')[0]
-		$OpsDB_SQLServerInstance = $OpsDB_SQLServerOriginal.split('\')[1]
+		$script:OpsDB_SQLServer = $script:OpsDB_SQLServerOriginal.split('\')[0]
+		$script:OpsDB_SQLServerInstance = $script:OpsDB_SQLServerOriginal.split('\')[1]
 	}
 	else
 	{
-		$OpsDB_SQLServerInstance = $null
-		$OpsDB_SQLServerPort = $null
+		$script:OpsDB_SQLServerInstance = $null
+		$script:OpsDB_SQLServerPort = $null
 	}
 	
-	If ($DW_SQLServerOriginal -like "*,*")
+	If ($script:DW_SQLServerOriginal -like "*,*")
 	{
-		$DW_SQLServer = $DW_SQLServerOriginal.split(',')[0]
-		$DW_SQLServerPort = $DW_SQLServerOriginal.split(',')[1]
+		$script:DW_SQLServer = $script:DW_SQLServerOriginal.split(',')[0]
+		$script:DW_SQLServerPort = $script:DW_SQLServerOriginal.split(',')[1]
 	}
-	elseif ($DW_SQLServerOriginal -like "*\*")
+	elseif ($script:DW_SQLServerOriginal -like "*\*")
 	{
-		$DW_SQLServer = $DW_SQLServerOriginal.split('\')[0]
-		$DW_SQLServerInstance = $DW_SQLServerOriginal.split('\')[1]
+		$script:DW_SQLServer = $script:DW_SQLServerOriginal.split('\')[0]
+		$script:DW_SQLServerInstance = $script:DW_SQLServerOriginal.split('\')[1]
 	}
 	else
 	{
-		$DW_SQLServerInstance = $null
-		$DW_SQLServerPort = $null
+		$script:DW_SQLServerInstance = $null
+		$script:DW_SQLServerPort = $null
 	}
 	
 	
@@ -298,12 +298,12 @@ Function Invoke-SQLQueries
 	$Populated = 1
 	
 	## Verify variables are populated
-	If ($null -eq $OpsDB_SQLServer)
+	If ($null -eq $script:OpsDB_SQLServer)
 	{
 		write-output "OpsDBServer not found"
 		$Populated = 0
 	}
-	If ($null -eq $DW_SQLServer)
+	If ($null -eq $script:DW_SQLServer)
 	{
 		write-output "DataWarehouse server not found"
 		$Populated = 0
@@ -331,25 +331,25 @@ Function Invoke-SQLQueries
 	## Combine the objects into a single object and display via table.
 	$color = "Cyan"
 	Write-Output " "
-	Write-Console "OpsDB Server        : $OpsDB_SQLServer" -ForegroundColor $color -NoNewline
-	if ($OpsDB_SQLServerInstance)
+	Write-Console "OpsDB Server        : $script:OpsDB_SQLServer" -ForegroundColor $color -NoNewline
+	if ($script:OpsDB_SQLServerInstance)
 	{
-		Write-Console "\$OpsDB_SQLServerInstance" -ForegroundColor $color -NoNewline
+		Write-Console "\$script:OpsDB_SQLServerInstance" -ForegroundColor $color -NoNewline
 	}
-	if ($OpsDB_SQLServerPort)
+	if ($script:OpsDB_SQLServerPort)
 	{
-		Write-Console "`nOpsDB Server Port   : $OpsDB_SQLServerPort" -ForegroundColor $color -NoNewline
+		Write-Console "`nOpsDB Server Port   : $script:OpsDB_SQLServerPort" -ForegroundColor $color -NoNewline
 	}
 	Write-Console "`nOpsDB Name          : $OpsDB_SQLDBName" -ForegroundColor $color
 	Write-Output " "
-	Write-Console "DWDB Server         : $($DW_SQLServer)" -ForegroundColor $color -NoNewline
-	if ($DW_SQLServerInstance)
+	Write-Console "DWDB Server         : $($script:DW_SQLServer)" -ForegroundColor $color -NoNewline
+	if ($script:DW_SQLServerInstance)
 	{
-		Write-Console "\$DW_SQLServerInstance" -ForegroundColor $color -NoNewline
+		Write-Console "\$script:DW_SQLServerInstance" -ForegroundColor $color -NoNewline
 	}
-	if ($DW_SQLServerPort)
+	if ($script:DW_SQLServerPort)
 	{
-		Write-Console "`nDWDB Server Port    : $DW_SQLServerPort" -ForegroundColor $color -NoNewline
+		Write-Console "`nDWDB Server Port    : $script:DW_SQLServerPort" -ForegroundColor $color -NoNewline
 	}
 	Write-Console "`nDWDB Name           : $DW_SQLDBName" -ForegroundColor $color
 	Write-Output " "
@@ -408,7 +408,7 @@ Function Invoke-SQLQueries
 				Write-Console "Currently Detecting User as: $currentuser"
 				do
 				{
-					$answer2 = Read-Host -Prompt " Does the above user have the correct permissions to perform SQL Queries against OpsDB: $OpsDB_SQLServer`? (Y/N)"
+					$answer2 = Read-Host -Prompt " Does the above user have the correct permissions to perform SQL Queries against OpsDB: $script:OpsDB_SQLServer`? (Y/N)"
 				}
 				until ($answer2 -eq "y" -or $answer2 -eq "n")
 			}
@@ -422,7 +422,7 @@ Function Invoke-SQLQueries
 		{
 			do
 			{
-				#$answer3 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on OpsDB: $OpsDB_SQLServer`? (SQL/Domain)"
+				#$answer3 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on OpsDB: $script:OpsDB_SQLServer`? (SQL/Domain)"
 				$answer3 = "Domain"
 			}
 			until ($answer3 -eq "SQL" -or $answer3 -eq "Domain")
@@ -458,7 +458,7 @@ Function Invoke-SQLQueries
 			{
 				do
 				{
-					$answer4 = Read-Host -Prompt " Does `'$currentuser`' have the correct permissions to perform SQL Queries against DW: $DW_SQLServer`? (Y/N)"
+					$answer4 = Read-Host -Prompt " Does `'$currentuser`' have the correct permissions to perform SQL Queries against DW: $script:DW_SQLServer`? (Y/N)"
 				}
 				until ($answer4 -eq "y" -or $answer4 -eq "n")
 			}
@@ -488,7 +488,7 @@ Function Invoke-SQLQueries
 				{
 					do
 					{
-						#$answer5 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on DW: $DW_SQLServer`? (SQL/Domain)"
+						#$answer5 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on DW: $script:DW_SQLServer`? (SQL/Domain)"
 						$answer5 = "Domain"
 					}
 					until ($answer5 -eq "SQL" -or $answer5 -eq "Domain")
@@ -520,7 +520,7 @@ Function Invoke-SQLQueries
 			{
 				do
 				{
-					$answer5 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on DW: $DW_SQLServer`? (SQL/Domain)"
+					$answer5 = Read-Host -Prompt "  Are you setup for `'SQL Credentials`' or `'Domain Credentials`' on DW: $script:DW_SQLServer`? (SQL/Domain)"
 				}
 				until ($answer5 -eq "SQL" -or $answer5 -eq "Domain")
 				do
@@ -593,12 +593,12 @@ Function Invoke-SQLQueries
 				$timeout = 30
 				if ($SqlIntegratedSecurity)
 				{
-					$initialCheck = Invoke-SqlCommand -Server $OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
+					$initialCheck = Invoke-SqlCommand -Server $script:OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
 				}
 				<#				
 				else
 				{
-					$initialCheck = Invoke-SqlCommand -Server $OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Username $SQLuser -Password $SQLpass -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
+					$initialCheck = Invoke-SqlCommand -Server $script:OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Username $SQLuser -Password $SQLpass -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
 				}
 				#>
 				
@@ -632,7 +632,7 @@ Function Invoke-SQLQueries
 					if ($SqlIntegratedSecurity)
 					{
 						$OpsScriptBlock = [scriptblock]::Create(@"
-  Invoke-SqlCommand -Server $OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $jobtimeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
+  Invoke-SqlCommand -Server $script:OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $jobtimeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 "@)
 						#This runs all queries with Perf in the name, as a job
 						if ($QueryFileName -match 'Perf')
@@ -651,7 +651,7 @@ Function Invoke-SQLQueries
 						{
 							Write-Console "     Running query: " -ForegroundColor Cyan -NoNewline
 							Write-Console $QueryFile.Name -ForegroundColor Magenta
-							Invoke-SqlCommand -Server $OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
+							Invoke-SqlCommand -Server $script:OpsDB_SQLServerOriginal -Database $OpsDB_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 						}
 						continue
 					}
@@ -659,28 +659,19 @@ Function Invoke-SQLQueries
 				}
 				catch
 				{
+					Write-Console "       Error running SQL query: $QueryFileName
+$_
+" -ForegroundColor Red
+					$_ | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 					#potential error code
 					#use continue or break keywords
 					$e = $_.Exception
 					$line = $_.InvocationInfo.ScriptLineNumber
 					$msg = $e.Message
 					
-					if ($msg -like "*Invalid object name 'MT_Microsoft`$SystemCenter`$Advisor`$Settings'*") {
-						# Handle the specific error here
-						Write-Console "Unable to gather data from Advisor table due to missing the System Center Advisor Management Packs." -ForegroundColor 
-						"$(Invoke-TimeStamp)Unable to gather data from Advisor table due to missing the System Center Advisor Management Packs." | Out-File $OutputPath\Error.log -Append
-					}
-					else
-					{
-					Write-Console "       Error running SQL query: $QueryFileName
-$_
-" -ForegroundColor Red
-					$_ | Export-Csv -Path "$OutputFileName" -NoTypeInformation
-
 					Write-Verbose "Caught Exception: $e :: Message: $msg :: at line: $line"
 					$details = "$(Invoke-TimeStamp)Caught Exception: $e :: Message: $msg :: at line: $line"
 					"$(Invoke-TimeStamp)Error running SQL query: $QueryFileName `n$details" | Out-File $OutputPath\Error.log -Append
-					}
 				}
 				
 			}
@@ -740,11 +731,11 @@ $_
 		$timeout = 30
 		if ($SqlIntegratedSecurity)
 		{
-			$initialCheck = Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
+			$initialCheck = Invoke-SqlCommand -Server $script:DW_SQLServerOriginal -Database $DW_SQLDBName -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
 		}
 <#		else
 		{
-			$initialCheck = Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Username $SQLuser2 -Password $SQLpass2 -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
+			$initialCheck = Invoke-SqlCommand -Server $script:DW_SQLServerOriginal -Database $DW_SQLDBName -Username $SQLuser2 -Password $SQLpass2 -Query 'SELECT 1' -As DataRow -Timeout $timeout -ErrorAction Stop
 		}
 		#>
 		
@@ -779,7 +770,7 @@ $_
 			if ($SqlIntegratedSecurity)
 			{
 				$DWScriptBlock = [scriptblock]::Create(@"
-  Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $jobtimeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
+  Invoke-SqlCommand -Server $script:DW_SQLServerOriginal -Database $DW_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $jobtimeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 "@)
 				#This runs all queries with Perf in the name, as a job
 				if ($QueryFileName -match 'Perf')
@@ -798,7 +789,7 @@ $_
 				{
 					Write-Console "     Running query: " -ForegroundColor Cyan -NoNewline
 					Write-Console $QueryFile.Name -ForegroundColor Magenta
-					Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
+					Invoke-SqlCommand -Server $script:DW_SQLServerOriginal -Database $DW_SQLDBName -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 				}
 				continue
 			}
@@ -806,7 +797,7 @@ $_
 			else
 			{
 				$DWScriptBlock = [scriptblock]::Create(@"
-  Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Username $SQLuser2 -Password $SQLpass2 -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $jobtimeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
+  Invoke-SqlCommand -Server $script:DW_SQLServerOriginal -Database $DW_SQLDBName -Username $SQLuser2 -Password $SQLpass2 -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $jobtimeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 "@)
 				#This runs all queries with Perf in the name, as a job
 				if ($QueryFileName -match 'Perf')
@@ -825,7 +816,7 @@ $_
 				{
 					Write-Console "     Running query: " -ForegroundColor Cyan -NoNewline
 					Write-Console $QueryFile.Name -ForegroundColor Magenta
-					Invoke-SqlCommand -Server $DW_SQLServerOriginal -Database $DW_SQLDBName -Username $SQLuser2 -Password $SQLpass2 -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
+					Invoke-SqlCommand -Server $script:DW_SQLServerOriginal -Database $DW_SQLDBName -Username $SQLuser2 -Password $SQLpass2 -Path "$QueriesPath\$QueryFile" -As DataRow -Timeout $timeout -ErrorAction Stop | Export-Csv -Path "$OutputFileName" -NoTypeInformation
 				}
 				continue
 			}

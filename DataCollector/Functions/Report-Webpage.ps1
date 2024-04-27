@@ -69,8 +69,8 @@ Function Report-Webpage
   evt.currentTarget.className += ' active';
 }"
 	$HeadDW += "</script>"
-	#$ReportOutput += "<p>Operational Database Server      :  $OpsDB_SQLServer</p>"
-	#$ReportOutput += "<p>Data Warehouse Database Server   :  $DW_SQLServer</p>"  
+	#$ReportOutput += "<p>Operational Database Server      :  $script:OpsDB_SQLServer</p>"
+	#$ReportOutput += "<p>Data Warehouse Database Server   :  $script:DW_SQLServer</p>"  
 	
 	$CSVFileLocation = "$ScriptPath\output"
 	
@@ -109,7 +109,7 @@ Function Report-Webpage
 	$ReportOutputDW += "</div>"
 	
 	# General Information - OpsMgr
-	$reportDetail = $setupLocation.Product, $setupLocation.InstalledOn, $setupLocation.CurrentVersion, $setupLocation.ServerVersion, $setupLocation.UIVersion, $setupLocation.ManagementServerPort, "$ManagementServers", $setupLocation.DatabaseServerName, $setupLocation.DatabaseName, $setupLocation.InstallDirectory, "$OMSQLProperties"
+	$reportDetail = $setupLocation.Product, $setupLocation.InstalledOn, $setupLocation.CurrentVersion, $setupLocation.ServerVersion, $setupLocation.UIVersion, $setupLocation.ManagementServerPort, "$script:ManagementServers", $setupLocation.DatabaseServerName, $setupLocation.DatabaseName, $setupLocation.InstallDirectory, "$OMSQLProperties"
 	$reportDetail = "<tr>" + ($reportDetail | ForEach-Object { "<td>$_</td>" }) + "</tr>"
 	$ReportOutput += @("<div id='general' class='tabcontent'>
 <h3>General Information</h3>
@@ -386,11 +386,11 @@ Function Report-Webpage
 	#
 	#
 	
-	$ManagementServersImport = Import-CSV "$CSVFileLocation`\ManagementServers.csv"
+	$script:ManagementServersImport = Import-CSV "$CSVFileLocation`\ManagementServers.csv"
 	$ReportOutput += "<div id='managementServers' class='tabcontent'>"
 	$ReportOutput += "<h3>Management Servers</h3>"
 	$ReportOutput += "<table style='width: 300px;'><th>Display Name</th><th>Is Management Server</th><th>Is Gateway</th><th>Is RHS</th><th>Version</th><th>Action Account Identity</th><th>Heartbeat Interval</th>"
-	foreach ($line in $ManagementServersImport)
+	foreach ($line in $script:ManagementServersImport)
 	{
 		$ReportOutput += "<tr><td>" + $line[0].DisplayName + "</td><td>" + $line[0].IsManagementServer + "</td><td>" + $line[0].IsGateway + "</td><td>" + $line[0].IsRHS + "</td><td>" + $line[0].Version + "</td><td>" + $line[0].ActionAccountIdentity + "</td><td>" + $line[0].HeartbeatInterval + "</td></tr>"
 	}

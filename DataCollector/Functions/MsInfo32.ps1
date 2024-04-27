@@ -10,12 +10,12 @@ Function Invoke-MSInfo32Gathering
 	}
 	try
 	{
-		$TestedTLSservers | ForEach-Object { $serv = $_; Write-Console "    Gathering MSInfo32 from: " -NoNewline; Write-Console "$serv" -ForegroundColor Cyan; Start-Process "msinfo32.exe" -ArgumentList "/report `"$OutputPath\MSInfo32\$_.msinfo32.txt`" /computer $serv" -NoNewWindow -Wait; $serv = $null; }
+		$script:TestedTLSservers | ForEach-Object { $serv = $_; Write-Console "    Gathering MSInfo32 from: " -NoNewline; Write-Console "$serv" -ForegroundColor Cyan; Start-Process "msinfo32.exe" -ArgumentList "/report `"$OutputPath\MSInfo32\$_.msinfo32.txt`" /computer $serv" -NoNewWindow -Wait; $serv = $null; }
 	}
 	catch
 	{
 		Write-Warning "     Issue gathering MSInfo32 with this command: msinfo32.exe /report `"C:\Windows\Temp\$serv.msinfo32.txt`" /computer $serv"
-		$sessions = New-PSSession -ComputerName $TestedTLSservers
+		$sessions = New-PSSession -ComputerName $script:TestedTLSservers
 		Invoke-Command -Session $sessions {
 			$Name = $env:COMPUTERNAME
 			$FileName = "$name" + ".msinfo32.txt"
@@ -50,7 +50,7 @@ Function Invoke-MSInfo32Gathering
 		Get-PSSession | Remove-PSSession
 		write-Output " "
 		Write-output "Moving MSInfo32 Reports to $env:COMPUTERNAME"
-		foreach ($rserv in $TestedTLSservers)
+		foreach ($rserv in $script:TestedTLSservers)
 		{
 			Write-output " Retrieving MSInfo32 Report from $rserv"
 			Move-Item "\\$rserv\c$\windows\Temp\*.msinfo32.txt" "$OutputPath\MSInfo32"

@@ -133,7 +133,7 @@ Detected Issues / Best Practices for SCOM
 				{
 					Write-Verbose "$(Invoke-TimeStamp)Check DW Writer Login from Database against RunAs Profile 'Data Warehouse Account'"
 					$writerLoginName = (Import-Csv -ErrorAction SilentlyContinue -Path $OutputPath\DW_WriterLoginName.csv).WriterLoginName
-					$DWAction = (Import-Csv -Path $OutputPath\RunAsProfiles.csv -ErrorAction SilentlyContinue | Where-Object { $_.ProfileName -eq 'Microsoft.SystemCenter.DataWarehouse.ActionAccount' }) | Select-Object Domain, UserName, SSID, AccountName, TypeName -Unique
+					$DWAction = (Import-Csv -Path $OutputPath\RunAsAccountInfo.csv -ErrorAction SilentlyContinue | Where-Object { $_.ProfileName -eq 'Microsoft.SystemCenter.DataWarehouse.ActionAccount' }) | Select-Object Domain, UserName, SSID, AccountName, TypeName -Unique
 					$DWWriterAccount = @()
 					if ($DWAction)
 					{
@@ -256,7 +256,7 @@ Detected Issues / Best Practices for SCOM
 				{
 					Write-Verbose "$(Invoke-TimeStamp)Check RunAs Profile 'Data Warehouse Report Deployment Account'"
 					$rptDeploymentAccount = @()
-					$DWReportDeployment = (Import-Csv -Path $OutputPath\RunAsProfiles.csv | Where-Object { $_.ProfileName -eq 'Microsoft.SystemCenter.DataWarehouse.ReportDeploymentActionAccount' }) | Select-Object Domain, UserName, AccountName, TypeName -Unique
+					$DWReportDeployment = (Import-Csv -Path $OutputPath\RunAsAccountInfo.csv | Where-Object { $_.ProfileName -eq 'Microsoft.SystemCenter.DataWarehouse.ReportDeploymentActionAccount' }) | Select-Object Domain, UserName, AccountName, TypeName -Unique
 					if ($DWReportDeployment)
 					{
 						if (($DWReportDeployment | Select-Object -ExpandProperty UserName -Unique).Count -ne 1 -or ($DWReportDeployment.Count -ne 2))
@@ -663,24 +663,24 @@ Detected Issues / Best Practices for SCOM
 						Write-Verbose "$(Invoke-TimeStamp)Starting SPN Checker"
 						Write-Verbose "$(Invoke-TimeStamp)Importing CSV: $(Resolve-Path -Path "$OutputPath\SPN-Output.csv" -ErrorAction Stop)"
 						$SPNdata = Import-Csv "$OutputPath\SPN-Output.csv" -ErrorAction Stop
-						if (-NOT ($ManagementServers))
+						if (-NOT ($script:ManagementServers))
 						{
 							try
 							{
-								$ManagementServers = Import-Csv "$OutputPath\ManagementServers.csv" -ErrorAction Stop
+								$script:ManagementServers = Import-Csv "$OutputPath\ManagementServers.csv" -ErrorAction Stop
 							}
 							catch
 							{
-								if (!$ManagementServers)
+								if (!$script:ManagementServers)
 								{
-									$ManagementServers = Get-SCOMManagementServer
+									$script:ManagementServers = Get-SCOMManagementServer
 								}
 							}
-							[array]$MSlist = $ManagementServers | Select-Object -Property DisplayName -ExpandProperty DisplayName -Unique
+							[array]$MSlist = $script:ManagementServers | Select-Object -Property DisplayName -ExpandProperty DisplayName -Unique
 						}
 						else
 						{
-							[array]$MSlist = $ManagementServers
+							[array]$MSlist = $script:ManagementServers
 						}
 						
 						ForEach ($ManagementServer in $MSlist)
@@ -790,13 +790,13 @@ Detected Issues / Best Practices for SCOM
 					<#
 					try
 					{
-						$ManagementServers = Import-Csv "$OutputPath\ManagementServers.csv" -ErrorAction Stop
+						$script:ManagementServers = Import-Csv "$OutputPath\ManagementServers.csv" -ErrorAction Stop
 					}
 					catch
 					{
-						if (!$ManagementServers)
+						if (!$script:ManagementServers)
 						{
-							$ManagementServers = Get-SCOMManagementServer | Select-Object -ExpandProperty DisplayName
+							$script:ManagementServers = Get-SCOMManagementServer | Select-Object -ExpandProperty DisplayName
 						}
 					}
 					#>
@@ -874,7 +874,7 @@ A high number of dynamic groups detected, this may cause some issues with group 
 "@
 					}
 					$($groupOut | Select-Object DynamicGroupName, DiscoveryName, DynamicExpressionCount, MemberCount | Sort-Object DynamicExpressionCount, MemberCount -Descending) | Out-File "$OutputPath\GroupMembershipInformation.txt" -Width 4096
-					$($groupOut | Select-Object DynamicGroupName, DiscoveryName, DynamicExpressionCount, MemberCount | Sort-Object DynamicExpressionCount, MemberCount -Descending) | Export-CSV -Path "$OutputPath\CSV\GroupMembershipInformation.csv" -NoTypeInformation
+					$($groupOut | Select-Object DynamicGroupName, DiscoveryName, DynamicExpressionCount, MemberCount | Sort-Object DynamicExpressionCount, MemberCount -Descending) | Export-CSV -Path "$OutputPath\GroupMembershipInformation.csv" -NoTypeInformation
 				}
 				catch
 				{
@@ -882,15 +882,20 @@ A high number of dynamic groups detected, this may cause some issues with group 
 					Write-Verbose $_
 				}
 			}
+
+			# #=============================================================
+			# General Info Checker
+			# #=============================================================
 			# Check information in General Info Text File for discrepancies
 			$GeneralInfo = Get-Content "$OutputPath\General Information.txt" -ErrorAction SilentlyContinue
 			if ($GeneralInfo)
 			{
+				Write-Verbose "$(Invoke-TimeStamp)Starting General Information Text file analysis"
 				foreach ($line in $GeneralInfo)
 				{
 					# Check Latency between Management Server(s) and SQL Database(s)
 					$objectSplit = ($line | Where-Object {
-							($_ -match "-> $(($OpsDB_SQLServer).Replace("\", "\\")) :|-> $(($DW_SQLServer).Replace("\", "\\")):")
+							($_ -match "-> $(($script:OpsDB_SQLServer).Replace("\", "\\")) :|-> $(($script:DW_SQLServer).Replace("\", "\\")):")
 						}) -split " "
 					if ($objectSplit)
 					{
@@ -918,14 +923,8 @@ A high number of dynamic groups detected, this may cause some issues with group 
 					}
 				}
 			}
-			if ($bestpractice)
-			{
-				return $bestpractice
-			}
-			else
-			{
-				return $null
-			}
+			Write-Verbose "$(Invoke-TimeStamp)Completed Best Practice Analysis!"
+			return $bestpractice
 		}
 		$gatheredData = @()
 		# Go through each server passed to the main function: Invoke-GetBestPractices
@@ -937,14 +936,7 @@ A high number of dynamic groups detected, this may cause some issues with group 
 				# If Local
 				Write-Host '-' -NoNewline -ForegroundColor Green
 				$scriptOutput = Invoke-InnerGetBestPractices
-				if ($scriptOutput)
-				{
-					$gatheredData += $scriptOutput
-				}
-				else
-				{
-					continue
-				}
+				$gatheredData += $scriptOutput
 				
 				Write-Console "> Completed!`n" -NoNewline -ForegroundColor Green
 			}

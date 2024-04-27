@@ -60,7 +60,7 @@ Function Get-TLSRegistryKeys
 			}
 		}
 		$finalData = @()
-		$ProtocolList = "TLS 1.0", "TLS 1.1", "TLS 1.2"
+		$ProtocolList = "TLS 1.0", "TLS 1.1", "TLS 1.2", "TLS 1.3"
 		$ProtocolSubKeyList = "Client", "Server"
 		$DisabledByDefault = "DisabledByDefault"
 		$Enabled = "Enabled"
@@ -79,8 +79,8 @@ Function Get-TLSRegistryKeys
 				$localresults = @()
 				if (!(Test-Path $currentRegPath))
 				{
-					$IsDisabledByDefault = "Null"
-					$IsEnabled = "Null"
+					$IsDisabledByDefault = "DoesntExist"
+					$IsEnabled = "DoesntExist"
 				}
 				else
 				{
@@ -241,8 +241,8 @@ Function Get-TLSRegistryKeys
 				$localresults = @()
 				if (!(Test-Path $currentRegPath))
 				{
-					$IsDisabledByDefault = "Null"
-					$IsEnabled = "Null"
+					$IsDisabledByDefault = "DoesntExist"
+					$IsEnabled = "DoesntExist"
 				}
 				else
 				{

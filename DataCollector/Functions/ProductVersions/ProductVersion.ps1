@@ -10,7 +10,7 @@ function Get-ProductVersion
 	)
 	
 	#Last Updated SQL Server List on: March 22nd, 2024
-	#Last Updated SCOM Version List on: March 22nd, 2024
+	#Last Updated SCOM Version List on: April 6th, 2024
 	#Last Updated SSRS Version List on: March 22nd, 2024
 	$matched = $false
 	if ($Product -eq 'SCOM')
@@ -43,6 +43,7 @@ function Get-ProductVersion
     <# 
        System Center Operations Manager 2022 Versions
     #>
+			'10.22.1072.0'  { "FIPS Crypto Policy Support - 1.9.0-0 / 2024 April"; $matched = $true } #SCX Agent
 			'10.22.1070.0'  { "Update Rollup 2 - Hotfix - 1.8.1-0 / 2024 March"; $matched = $true } #SCX Agent
 			'10.22.10208.0' { "SCOM 2022 Update Rollup 2 / 2023 November"; $matched = $true } #Agent
 			'10.22.10610.0' { "Update Rollup 2 / 2023 November "; $matched = $true }
@@ -65,7 +66,10 @@ function Get-ProductVersion
     <# 
        System Center Operations Manager 2019 Versions
     #>
+			'10.19.1254.0'  { "FIPS Crypto Policy Support - 1.9.0-0 / 2024 April"; $matched = $true } #SCX Agent
 			'10.19.1253.0'  { "Update Rollup 6 - 1.8.1-0 / 2024 March"; $matched = $true } #SCX Agent
+			'10.19.10253.0' { "Update Rollup 6 / 2024 March"; $matched = $true } #Agent
+			'10.19.10649.0' { "Update Rollup 6 / 2024 March"; $matched = $true }
 			'10.19.1234.0'  { "OMI Vulnerability Fix - 1.7.3-0 / 2023 November"; $matched = $true } #SCX Agent
 			'10.19.1226.0'  { "Update Rollup 5 - Hotfix - 1.7.1-0 / 2023 August"; $matched = $true } #SCX Agent
 			'10.19.10618.0' { "SCX Compiler Mitigated Packages / 2023 August"; $matched = $true }
@@ -102,6 +106,7 @@ function Get-ProductVersion
     <# 
        System Center Operations Manager 2016 Versions
     #>
+			'7.6.1201.0'  { "FIPS Crypto Policy Support - 1.9.0-0 / 2024 April"; $matched = $true } #SCX Agent
 			'7.6.1197.0'  { "Update Rollup 10 - Hotfix - 1.8.1-0 / 2024 March"; $matched = $true } #SCX Agent
 			'7.6.1189.0'  { "OMI Vulnerability Fix - 1.7.3-0 / 2023 November"; $matched = $true } #SCX Agent
 			'7.6.1185.0'    { "Update Rollup 10 - Hotfix - 1.7.1-0 / 2023 August"; $matched = $true } #SCX Agent

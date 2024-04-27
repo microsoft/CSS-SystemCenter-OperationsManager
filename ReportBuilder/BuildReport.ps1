@@ -23,8 +23,6 @@
 
 		Custom Location for Input Folder where the CSV files are located and a custom output folder.
 			PS C:\> .\BuildReport.ps1 -InputFolderPath 'C:\Temp\Data Collector\CSV' -OutputFolderPath 'C:\Temp\Data Collector\Built Report\'
-
--InputFolderPath
 	
 	.NOTES
 		Original Author: Kevin Holman
@@ -54,6 +52,10 @@
 				Added ability to extract zip files and gather the CSV's present.
 				Script will now add the first row as frozen and a filter will be present.
 				Fixed bug with Excel Process not closing when processing is done.
+
+		Modified by Blake Drumm 4/27/2024
+			v1.6
+				Small verbiage fix for pop-up box.
 #>
 [CmdletBinding(PositionalBinding = $true)]
 param
@@ -64,7 +66,7 @@ param
 	[string]$ExcelReportFileName,
 	[Parameter(Mandatory = $false,
 			   Position = 1,
-			   HelpMessage = "The folder where the CSVs are located. We will recursively search in this directory for this pattern `' * .csv`'.")]
+			   HelpMessage = "The folder where the CSVs are located. We will recursively search in this directory for this pattern ' * .csv'.")]
 	[string]$InputFolderPath,
 	[Parameter(Mandatory = $false,
 			   Position = 2,
@@ -198,7 +200,7 @@ BEGIN
 			Write-Output "$(Invoke-TimeStamp)Creating Input Directory as it is not currently present: $CSVPath"
 			New-Item -ItemType Directory -Path $CSVPath | Out-Null
 		}
-		[array]$CSVFiles = Get-ChildItem -path $CSVPath -Filter "*.csv" -Recurse | Sort-Object -Descending
+		[array]$CSVFiles = Get-ChildItem -path $CSVPath -Filter "*.csv" -Recurse | Sort-Object
 		#Find the number of CSVs being imported
 		$count = $CSVFiles.count
 		Write-Output "$(Invoke-TimeStamp)Total CSVs Detected: $count"
@@ -209,7 +211,7 @@ BEGIN
 				Add-Type -AssemblyName Microsoft.VisualBasic
 				
 				$title = 'File Name'
-				$msg = 'Please enter the filename you would like to save as. To use the auto generated name, just press OK.'
+				$msg = 'Please enter the filename you would like to save the excel spreadsheet as. To use the auto generated name, just press OK.'
 				
 				[string]$filedate = (Get-Date).tostring("MM_dd_yyyy_hh-mm-tt")
 				$ExcelReportFileName = "ReportBuilder-$filedate"
@@ -246,7 +248,7 @@ PROCESS
 	#Create Excel Com Object
 	try
 	{
-		$excel = new-object -ComObject excel.application -ErrorAction Stop
+		$excel = new-object -ComObject Excel.Application -ErrorAction Stop
 	}
 	catch
 	{

@@ -11,6 +11,7 @@
 --
 -- Author: Blake Drumm (blakedrumm@microsoft.com)
 -- Date Created: May 7th, 2024
+-- Date Modified: May 8th, 2024
 -- Original query: https://kevinholman.com/2016/11/11/scom-sql-queries/#:~:text=Events%20Section%20(Warehouse)
 ----------------------------------------------------------------------------------------------------------------
 -- Selects the top 100 records from the result set

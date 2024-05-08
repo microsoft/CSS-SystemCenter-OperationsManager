@@ -107,9 +107,9 @@ Function Get-TLSRegistryKeys
 																	@{ n = 'Type'; e = { $key } },
 																	@{ n = 'DisabledByDefault'; e = { 
 																		$output = ($IsDisabledByDefault).ToString()
-																		if ($output -eq '0')
+																		if ($output -match "0|1")
 																		{
-																			$output.Replace('0', 'False').Replace('1', 'True') 
+																			$output.Replace('0', 'False').Replace('1', 'True')
 																		}
 																		elseif ($output -eq '$0xffffffff')
 																		{
@@ -123,9 +123,9 @@ Function Get-TLSRegistryKeys
 																		} },
 																	@{ n = 'IsEnabled'; e = { 
 																		$output = ($IsEnabled).ToString()
-																		if ($output -eq '0')
+																		if ($output -match "0|1")
 																		{
-																			$output.Replace('0', 'False').Replace('1', 'True') 
+																			$output.Replace('0', 'False').Replace('1', 'True')
 																		}
 																		elseif ($output -eq '$0xffffffff')
 																		{

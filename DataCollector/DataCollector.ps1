@@ -178,7 +178,7 @@
 		https://github.com/blakedrumm/SCOM-Scripts-and-SQL
 		
 		.VERSION
-		v4.0.3 - April 27th, 2024
+		v4.0.4 - May 7th, 2024
 #>
 [CmdletBinding(HelpUri = 'https://blakedrumm.com/blog/scom-data-collector/')]
 [OutputType([string])]
@@ -1880,7 +1880,7 @@ exit 1
 <#
 MIT License
 
-Copyright (c) 2024 Blake Drumm
+Copyright (c) Blake Drumm
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

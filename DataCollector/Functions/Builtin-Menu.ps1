@@ -181,6 +181,15 @@ Function Invoke-DataCollectorMenu
 						$selection = Read-Host "Please make a selection"
 					}
 					until ($selection -match "\d[a-z]")
+					do
+					{
+						$PingAllServers = Read-Host "Do you want to run extended latency checks? The checks are more thorough and allow you to identify network latency issues between Management Servers and SCOM SQL Server(s). (Y/N)"
+					}
+					until ($PingAllServers -eq "y" -or $PingAllServers -eq "n")
+					if ($PingAllServers -eq "y")
+					{
+						Write-Console "The Output for the extended latency checks will be in the General Information text file in the output." -ForegroundColor Blue
+					}
 					switch ($selection)
 					{
 						'1a'
@@ -193,29 +202,57 @@ Function Invoke-DataCollectorMenu
 							until ($Servers)
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
 								if ($null -ne $Servers)
 								{
-									Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -GetUserRoles
+									if ($PingAllServers -eq "y")
+									{
+										Start-ScomDataCollector -PingAll -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -GetUserRoles
+									}
+									else
+									{
+										Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -GetUserRoles
+									}
 								}
 								else
 								{
-									Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -Yes -GetUserRoles
+									if ($PingAllServers -eq "y")
+									{
+										Start-ScomDataCollector -PingAll -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -Yes -GetUserRoles
+									}
+									else
+									{
+										Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -Yes -GetUserRoles
+									}
 								}
 							}
 							if ($PermissionforSQL -like 'n')
 							{
 								if ($null -ne $Servers)
 								{
-									Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
+									if ($PingAllServers -eq "y")
+									{
+										Start-ScomDataCollector -PingAll -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
+									}
+									else
+									{
+										Start-ScomDataCollector -Servers $Servers -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
+									}
 								}
 								else
 								{
-									Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
+									if ($PingAllServers -eq "y")
+									{
+										Start-ScomDataCollector -PingAll -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
+									}
+									else
+									{
+										Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
+									}
 								}
 							}
 						}
@@ -223,16 +260,30 @@ Function Invoke-DataCollectorMenu
 						{
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
 							{
-								Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -GetUserRoles
+								if ($PingAllServers -eq "y")
+								{
+									Start-ScomDataCollector -PingAll -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -GetUserRoles
+								}
+								else
+								{
+									Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -AssumeYes -GetConfiguration -CheckGroupPolicy -GetInstallLogs -GetUserRoles
+								}
 							}
 							if ($PermissionforSQL -like 'n')
 							{
-								Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
+								if ($PingAllServers -eq "y")
+								{
+									Start-ScomDataCollector -PingAll -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
+								}
+								else
+								{
+									Start-ScomDataCollector -GetRulesAndMonitors -GetRunAsAccounts -CheckTLS -CheckCertificates -GetEventLogs -ExportMPs -GPResult -SQLLogs -CheckPorts -GetLocalSecurity -GetInstalledSoftware -GetSPN -GetConfiguration -CheckGroupPolicy -GetInstallLogs -NoSQLPermission -GetUserRoles
+								}
 							}
 							
 						}
@@ -240,7 +291,7 @@ Function Invoke-DataCollectorMenu
 						{
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							do
@@ -263,7 +314,7 @@ Function Invoke-DataCollectorMenu
 							until ($SCXResourcePools)
 							do
 							{
-								$EnumerateAllSCXClasses = Read-Host "Do you want to enumerate all SCX Classes from the Linux Agent(s) with WinRM? Y/N"
+								$EnumerateAllSCXClasses = Read-Host "Do you want to enumerate all SCX Classes from the Linux Agent(s) with WinRM? (Y/N)"
 							}
 							until ($EnumerateAllSCXClasses -eq "y" -or $EnumerateAllSCXClasses -eq "n")
 							if ($EnumerateAllSCXClasses -eq "n")
@@ -271,7 +322,7 @@ Function Invoke-DataCollectorMenu
 								$EnumerateAllSCXClasses = $null
 								do
 								{
-									$EnumerateSpecificSCXClasses = Read-Host "Do you want to gather specific SCX Classes ('N' will allow you to gather the default SCX Classes from the Linux Agent(s))? Y/N"
+									$EnumerateSpecificSCXClasses = Read-Host "Do you want to gather specific SCX Classes ('N' will allow you to gather the default SCX Classes from the Linux Agent(s))? (Y/N)"
 								}
 								until ($EnumerateSpecificSCXClasses -eq "y" -or $EnumerateSpecificSCXClasses -eq "n")
 								if ($EnumerateSpecificSCXClasses -eq "y")
@@ -335,7 +386,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -378,7 +429,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -411,7 +462,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -444,7 +495,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -476,7 +527,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -508,7 +559,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -540,7 +591,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -572,7 +623,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -604,7 +655,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -636,7 +687,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -668,7 +719,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -700,7 +751,7 @@ Function Invoke-DataCollectorMenu
 							[string]$Servers = Read-Host 'Please Type the Names of the Windows Agents (ex. Agent1.contoso.com, Agent2.contoso.com)'
 							do
 							{
-								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+								$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 							}
 							until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 							if ($PermissionforSQL -like 'y')
@@ -733,7 +784,7 @@ Function Invoke-DataCollectorMenu
 			} '3' {
 				do
 				{
-					$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' Y/N"
+					$PermissionforSQL = Read-Host "Does the following account have permissions to run SQL queries against the Operations Manager DB and Data Warehouse DB? `'$runningas`' (Y/N)"
 				}
 				until ($PermissionforSQL -eq "y" -or $PermissionforSQL -eq "n")
 				if ($PermissionforSQL -like 'y')

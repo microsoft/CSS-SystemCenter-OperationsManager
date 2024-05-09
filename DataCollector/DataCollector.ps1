@@ -178,7 +178,7 @@
 		https://github.com/blakedrumm/SCOM-Scripts-and-SQL
 		
 		.VERSION
-		v4.0.4 - May 7th, 2024
+		v4.0.5 - May 9th, 2024
 #>
 [CmdletBinding(HelpUri = 'https://blakedrumm.com/blog/scom-data-collector/')]
 [OutputType([string])]
@@ -1073,7 +1073,7 @@ function Start-ScomDataCollector
 		try
 		{
 			$UNIXAgentPools = (Import-Csv "$OutputPath\UNIX_Agents.csv" -ErrorAction Stop).ResourcePool | Select-Object -Unique
-			$UNIXManagementServer = (Import-Csv "$OutputPath\ResourcePools.csv" -ErrorAction Stop | Where-Object { $_.ResourcePool -in $UNIXAgentPools -and $SCXResourcePools -contains $_.ResourcePool}).Member
+			$UNIXManagementServer = (Import-Csv "$OutputPath\ResourcePools.csv" -ErrorAction Stop | Where-Object { $_.ResourcePool -in $UNIXAgentPools -or $SCXResourcePools -contains $_.ResourcePool }).Member
 		}
 		catch
 		{
@@ -1091,13 +1091,21 @@ function Start-ScomDataCollector
 			Write-Output "================================`nGathering SCX WinRM data (UNIX/Linux)"
 			. $ScriptPath`\Functions\Linux-WinRM-Tests.ps1
 			Write-Console "  Gathering Linux Agent Data from: $($SCXAgents -join ", ")" -ForegroundColor Green
-			if ($SCXWinRMEnumerateAllClasses)
+			try
 			{
-				Invoke-SCXWinRMEnumeration -OriginServer $UNIXManagementServer -ComputerName $SCXAgents -Credential $SCXWinRMCredentials -EnumerateAllClasses -OutputType Text -OutputFile $OutputPath\SCX_WinRM_Queries -PassThru | Out-Null
+				if ($SCXWinRMEnumerateAllClasses)
+				{
+					Invoke-SCXWinRMEnumeration -ErrorAction Stop -OriginServer $UNIXManagementServer -ComputerName $SCXAgents -Credential $SCXWinRMCredentials -EnumerateAllClasses -OutputType Text -OutputFile $OutputPath\SCX_WinRM_Queries -PassThru | Out-Null
+				}
+				else
+				{
+					Invoke-SCXWinRMEnumeration -ErrorAction Stop -OriginServer $UNIXManagementServer -ComputerName $SCXAgents -Credential $SCXWinRMCredentials -Classes $SCXWinRMEnumerateSpecificClasses -OutputType Text -OutputFile $OutputPath\SCX_WinRM_Queries -PassThru | Out-Null
+				}
 			}
-			else
+			catch
 			{
-				Invoke-SCXWinRMEnumeration -OriginServer $UNIXManagementServer -ComputerName $SCXAgents -Credential $SCXWinRMCredentials -Classes $SCXWinRMEnumerateSpecificClasses -OutputType Text -OutputFile $OutputPath\SCX_WinRM_Queries -PassThru | Out-Null
+				"$(Invoke-TimeStamp)Unable to gather SCX WinRM related data from: $($SCXAgents -join ", ")`nActual Error: $_" | Out-File $OutputPath\Error.log -Append
+				Write-Console "Unable to gather SCX WinRM related data from: $($SCXAgents -join ", ")`nActual Error: $_" -ForegroundColor Red
 			}
 		}
 		else

@@ -20,8 +20,8 @@
 	
 	.PARAMETER SkipDownloadPrerequisites
 		Skip downloading the prerequisite files to current directory:
-		- msoledbsql.msi  (https://learn.microsoft.com/sql/connect/oledb/release-notes-for-oledb-driver-for-sql-server?branch=main&branchFallbackFrom=pr-en-us-5180&view=sql-server-ver16#1867)
-		- msodbcsql.msi   (https://learn.microsoft.com/sql/connect/odbc/windows/release-notes-odbc-sql-server-windows?branch=main&branchFallbackFrom=pr-en-us-5180&view=sql-server-ver16#17105)
+		- msoledbsql.msi  (https://learn.microsoft.com/sql/connect/oledb/release-notes-for-oledb-driver-for-sql-server#1874)
+		- msodbcsql.msi   (https://learn.microsoft.com/sql/connect/odbc/windows/release-notes-odbc-sql-server-windows?view=sql-server-ver16#17105)
 		- sqlncli.msi     (https://www.microsoft.com/download/details.aspx?id=50402)
 	
 	.PARAMETER SkipModifyRegistry
@@ -40,19 +40,18 @@
 		Skip SCOM Version Check step.
 	
 	.EXAMPLE
-          Example 1
-            Normal run:
-	    PS C:\> .\Invoke-EnforceSCOMTLS1.2.ps1
+		.\Invoke-EnforceSCOMTLS1.2.ps1
+		Normal run
 
-          Example 2:
-            Set the prerequisites folder:
-            PS C:\> .\Invoke-EnforceSCOMTLS1.2.ps1 -DirectoryForPrerequisites "C:\Temp"
+	.EXAMPLE
+		.\Invoke-EnforceSCOMTLS1.2.ps1 -DirectoryForPrerequisites "C:\Temp"
+		Set the prerequisites folder:
 	
 	.NOTES
 		=================================================================================
 		
 				 SCOM TLS 1.2 / 1.3 Configuration Script
-					     v 2.4
+					     v 2.5
 	  
 		 This script supports: SCOM 2012R2, 2016, 1801, 1807, 2019, and 2022
 		                       SQL 2008R2 through 2022
@@ -61,7 +60,7 @@
 		 Original Author: Kevin Holman (https://kevinholman.com/)
 		 Author: Blake Drumm (https://blakedrumm.com/)
 		
-		 Last Updated: May 7th, 2024
+		 Last Updated: October 9th, 2024
 	
 	  	 Blog Post: https://blakedrumm.com/blog/enforce-tls-1-2-scom/
 		
@@ -321,16 +320,16 @@ function Start-SCOMTLSEnforcement
 			#>
 			try
 			{
-				# MSOLEDB 18.6.7
-				$releaseDownloadLink = 'https://go.microsoft.com/fwlink/?linkid=2242656'
-				$filename = 'msoledbsql_18.6.7'
-				Write-ScriptLog -Step Prerequisites -LogString "Downloading MSOLEDB 18.6.7 automatically from: '$releaseDownloadLink'" -ForegroundColor Cyan
+				# MSOLEDB 18.7.4
+				$releaseDownloadLink = 'https://go.microsoft.com/fwlink/?linkid=2278907'
+				$filename = 'msoledbsql_18.7.4'
+				Write-ScriptLog -Step Prerequisites -LogString "Downloading MSOLEDB 18.7.4 automatically from: '$releaseDownloadLink'" -ForegroundColor Cyan
 				Start-BitsTransfer -Source $releaseDownloadLink -Destination "$DirectoryForPrerequisites\$filename.msi" -ErrorAction Stop
-				Out-File -FilePath "$DirectoryForPrerequisites\$filename-Released-October 10 2023"
+				Out-File -FilePath "$DirectoryForPrerequisites\$filename-Released-July 09 2024"
 			}
 			catch
 			{
-				Write-ScriptLog -Step Prerequisites -LogString "Unable to download MSOLEDB 18.6.7 automatically from: 'https://learn.microsoft.com/sql/connect/oledb/download-oledb-driver-for-sql-server'" -ForegroundColor Red -Status Error
+				Write-ScriptLog -Step Prerequisites -LogString "Unable to download MSOLEDB 18.7.4 automatically from: 'https://learn.microsoft.com/sql/connect/oledb/download-oledb-driver-for-sql-server'" -ForegroundColor Red -Status Error
 			}
 			
 			#ODBC
@@ -354,7 +353,7 @@ function Start-SCOMTLSEnforcement
 			}
 			catch
 			{
-				Write-ScriptLog -Step Prerequisites -LogString "Unable to download ODBC 17.10.5 automatically from: 'https://learn.microsoft.com/sql/connect/odbc/windows/release-notes-odbc-sql-server-windows?branch=main&branchFallbackFrom=pr-en-us-5180&view=sql-server-ver16#17105'" -ForegroundColor Red -Status Error
+				Write-ScriptLog -Step Prerequisites -LogString "Unable to download ODBC 17.10.5 automatically from: 'https://learn.microsoft.com/sql/connect/odbc/windows/release-notes-odbc-sql-server-windows'" -ForegroundColor Red -Status Error
 			}
 			
 			# SQL Server 2012 Native Client

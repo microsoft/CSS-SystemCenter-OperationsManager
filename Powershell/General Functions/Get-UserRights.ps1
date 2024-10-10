@@ -1,71 +1,124 @@
 <#
     .SYNOPSIS
-        Get Local User Account rights from the Local Security Policy
-    
+        Retrieves local user account rights from the local or remote machine's security policy.
+
     .DESCRIPTION
-        This script will gather the local security policy User Rights from the local, or a remote machine.
-    
+        This script gathers the local security policy user rights assignments from the local machine or specified remote machines. It allows you to output the results to the console, a file (CSV or Text), or pass the results through the pipeline for further processing.
+
     .PARAMETER ComputerName
-        Comma separated list of servers you want to run this script against. To run locally, run without this switch.
-    
+        Specifies a comma-separated list of servers to run this script against. To run locally, omit this parameter. This parameter accepts values from the pipeline.
+
+    .PARAMETER UserName
+        Specifies the usernames to filter the results. Use this parameter to retrieve user rights assignments for specific users. Provide the username in the format: domain\Username. If omitted, all user rights assignments will be retrieved.
+
     .PARAMETER FileOutputPath
-        Location to store the Output File. Set the Type (CSV or Text) with FileOutputType
-    
+        Specifies the location where the output file will be stored. Use this parameter in combination with -FileOutputType to define the output format.
+
     .PARAMETER FileOutputType
-        Set the type of file you would like to output as. Combine with the OutputPath parameter.
-    
+        Specifies the type of file to output. Valid options are 'CSV' or 'Text'. This parameter should be used with -FileOutputPath.
+
     .PARAMETER PassThru
-        Output as an object that you can manipulate / access.
-    
+        Indicates that the script should output the results as objects to the pipeline, allowing for further manipulation or filtering.
+
     .EXAMPLE
-        Usage:
-        Get Local User Account Rights and output to text in console:
-        PS C:\> .\Get-UserRights.ps1
-        
-        Get Remote Server User Account Rights:
-        PS C:\> .\Get-UserRights.ps1 -ComputerName SQL.contoso.com
-        
-        Get Local Machine and Multiple Server User Account Rights:
-        PS C:\> .\Get-UserRights.ps1 -ComputerName $env:COMPUTERNAME, SQL.contoso.com
-        
-        Output to CSV in 'C:\Temp':
-        PS C:\> .\Get-UserRights.ps1 -FileOutputPath C:\Temp -FileOutputType CSV
-        
-        Output to Text in 'C:\Temp':
-        PS C:\> .\Get-UserRights.ps1 -FileOutputPath C:\Temp -FileOutputType Text
-        Pass thru object:
-        PS C:\> .\Get-UserRights.ps1 -ComputerName SQL.contoso.com -PassThru | Where {$_.Principal -match "Administrator"}
-    
+        Get local user account rights and output to the console:
+
+            PS C:\> .\Get-UserRights.ps1
+
+    .EXAMPLE
+        Get user account rights from a remote server:
+
+            PS C:\> .\Get-UserRights.ps1 -ComputerName SQL.contoso.com
+
+    .EXAMPLE
+        Get user account rights from the local machine and multiple remote servers:
+
+            PS C:\> .\Get-UserRights.ps1 -ComputerName $env:COMPUTERNAME, SQL.contoso.com
+
+    .EXAMPLE
+        Get user account rights for specific users on a remote server:
+
+            PS C:\> .\Get-UserRights.ps1 -ComputerName SQL.contoso.com -UserName CONTOSO\User1, CONTOSO\User2
+
+    .EXAMPLE
+        Output results to a CSV file in 'C:\Temp':
+
+            PS C:\> .\Get-UserRights.ps1 -FileOutputPath C:\Temp -FileOutputType CSV
+
+    .EXAMPLE
+        Output results to a text file in 'C:\Temp':
+
+            PS C:\> .\Get-UserRights.ps1 -FileOutputPath C:\Temp -FileOutputType Text
+
+    .EXAMPLE
+        Pass through objects and filter for a specific Privilege name:
+
+            PS C:\> .\Get-UserRights.ps1 -ComputerName SQL.contoso.com -PassThru | Where-Object { $_.PrivilegeName -eq "Deny log on locally" }
+
     .NOTES
-        This script is located in the following GitHub Repository: https://github.com/blakedrumm/SCOM-Scripts-and-SQL
-        Exact location: https://github.com/blakedrumm/SCOM-Scripts-and-SQL/blob/master/Powershell/General%20Functions/Get-UserRights.ps1
-        
-        Blog post: https://blakedrumm.com/blog/set-and-check-user-rights-assignment/
-        
         Author: Blake Drumm (blakedrumm@microsoft.com)
         First Created on: June 10th, 2021
-        Last Modified on: August 15th, 2022
+        Last Modified on: October 7th, 2024
+
+        GitHub Repository:
+        https://github.com/blakedrumm/SCOM-Scripts-and-SQL
+
+        Exact Location:
+        https://github.com/blakedrumm/SCOM-Scripts-and-SQL/blob/master/Powershell/General%20Functions/Get-UserRights.ps1
+		
+		------------------------------------------------------------------------------
+		
+		MIT License
+		Copyright (c) Microsoft
+		
+		Permission is hereby granted, free of charge, to any person obtaining a copy
+		of this software and associated documentation files (the "Software"), to deal
+		in the Software without restriction, including without limitation the rights
+		to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+		copies of the Software, and to permit persons to whom the Software is
+		furnished to do so, subject to the following conditions:
+		
+		The above copyright notice and this permission notice shall be included in all
+		copies or substantial portions of the Software.
+		
+		THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+		IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+		FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+		AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+		LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+		OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+		SOFTWARE.
+		
+	.LINK
+	    https://blakedrumm.com/blog/set-and-check-user-rights-assignment/
 #>
+
 [CmdletBinding()]
-[OutputType([string])]
 param
 (
 	[Parameter(ValueFromPipeline = $true,
 			   Position = 0,
-			   HelpMessage = '(Server1, Server2) Comma separated list of servers you want to run this script against. To run locally, run without this switch. This argument accepts values from the pipeline.')]
-	[Alias('servers')]
+			   HelpMessage = '(Server1, Server2) Comma-separated list of servers you want to run this script against. To run locally, run without this parameter. This argument accepts values from the pipeline.')]
+	[Alias('Computers', 'Servers')]
 	[array]$ComputerName,
 	[Parameter(Position = 1,
-			   HelpMessage = '(ex. C:\Temp) Location to store the Output File. Set the Type with FileOutputType')]
-	[string]$FileOutputPath,
+			   HelpMessage = 'Specifies the usernames to filter the results.')]
+	[Alias('User', 'Principal')]
+	[array]$UserName,
 	[Parameter(Position = 2,
-			   HelpMessage = '(CSV or Text) Set the type of file you would like to output as. Combine with the OutputPath parameter.')]
-	[ValidateSet('CSV', 'Text', '')]
-	[string]$FileOutputType,
+			   HelpMessage = '(e.g., C:\Temp) Location to store the output file. Set the type with FileOutputType.')]
+	[Alias('Path', 'OutputDirectory')]
+	[string]$FileOutputPath,
 	[Parameter(Position = 3,
-			   HelpMessage = 'Output as an object that you can manipulate / access.')]
+			   HelpMessage = '(CSV or Text) Sets the type of file you would like to output. Combine with the FileOutputPath parameter.')]
+	[ValidateSet('CSV', 'Text', '')]
+	[Alias('Type', 'OutputFileType')]
+	[string]$FileOutputType,
+	[Parameter(Position = 4,
+			   HelpMessage = 'Outputs the result as an object that you can manipulate or access.')]
 	[switch]$PassThru
 )
+
 BEGIN
 {
 	#region Initialization
@@ -107,9 +160,222 @@ BEGIN
 		$TimeStamp = Get-Date -Format "MM/dd/yyyy hh:mm:ss tt"
 		return "$TimeStamp - "
 	}
+	function Get-SecurityPolicy
+	{
+		param
+		(
+			$UserName
+		)
+		#requires -version 2
+		# Fail script if we can't find SecEdit.exe
+		$SecEdit = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) "SecEdit.exe"
+		if (-not (Test-Path $SecEdit))
+		{
+			Write-Error "File not found - '$SecEdit'" -Category ObjectNotFound
+			return
+		}
+		Write-Verbose "Found Executable: $SecEdit"
+		
+		# LookupPrivilegeDisplayName Win32 API doesn't resolve logon right display
+		# names, so use this hashtable
+		$UserLogonRights = @{
+			"SeAssignPrimaryTokenPrivilege"			    = "Replace a process level token"
+			"SeAuditPrivilege"						    = "Generate security audits"
+			"SeBackupPrivilege"						    = "Back up files and directories"
+			"SeBatchLogonRight"						    = "Log on as a batch job"
+			"SeChangeNotifyPrivilege"				    = "Bypass traverse checking"
+			"SeCreateGlobalPrivilege"				    = "Create global objects"
+			"SeCreatePagefilePrivilege"				    = "Create a pagefile"
+			"SeCreatePermanentPrivilege"			    = "Create permanent shared objects"
+			"SeCreateSymbolicLinkPrivilege"			    = "Create symbolic links"
+			"SeCreateTokenPrivilege"				    = "Create a token object"
+			"SeDebugPrivilege"						    = "Debug programs"
+			"SeDenyBatchLogonRight"					    = "Deny log on as a batch job"
+			"SeDenyInteractiveLogonRight"			    = "Deny log on locally"
+			"SeDenyNetworkLogonRight"				    = "Deny access to this computer from the network"
+			"SeDenyRemoteInteractiveLogonRight"		    = "Deny log on through Remote Desktop Services"
+			"SeDenyServiceLogonRight"				    = "Deny log on as a service"
+			"SeEnableDelegationPrivilege"			    = "Enable computer and user accounts to be trusted for delegation"
+			"SeImpersonatePrivilege"				    = "Impersonate a client after authentication"
+			"SeIncreaseBasePriorityPrivilege"		    = "Increase scheduling priority"
+			"SeIncreaseQuotaPrivilege"				    = "Adjust memory quotas for a process"
+			"SeIncreaseWorkingSetPrivilege"			    = "Increase a process working set"
+			"SeInteractiveLogonRight"				    = "Allow log on locally"
+			"SeLoadDriverPrivilege"					    = "Load and unload device drivers"
+			"SeLockMemoryPrivilege"					    = "Lock pages in memory"
+			"SeMachineAccountPrivilege"				    = "Add workstations to domain"
+			"SeManageVolumePrivilege"				    = "Perform volume maintenance tasks"
+			"SeNetworkLogonRight"					    = "Access this computer from the network"
+			"SeProfileSingleProcessPrivilege"		    = "Profile single process"
+			"SeRelabelPrivilege"					    = "Modify an object label"
+			"SeRemoteInteractiveLogonRight"			    = "Allow log on through Remote Desktop Services"
+			"SeRemoteShutdownPrivilege"				    = "Force shutdown from a remote system"
+			"SeRestorePrivilege"					    = "Restore files and directories"
+			"SeSecurityPrivilege"					    = "Manage auditing and security log"
+			"SeServiceLogonRight"					    = "Log on as a service"
+			"SeShutdownPrivilege"					    = "Shut down the system"
+			"SeSyncAgentPrivilege"					    = "Synchronize directory service data"
+			"SeSystemEnvironmentPrivilege"			    = "Modify firmware environment values"
+			"SeSystemProfilePrivilege"				    = "Profile system performance"
+			"SeSystemtimePrivilege"					    = "Change the system time"
+			"SeTakeOwnershipPrivilege"				    = "Take ownership of files or other objects"
+			"SeTcbPrivilege"						    = "Act as part of the operating system"
+			"SeTimeZonePrivilege"					    = "Change the time zone"
+			"SeTrustedCredManAccessPrivilege"		    = "Access Credential Manager as a trusted caller"
+			"SeUndockPrivilege"						    = "Remove computer from docking station"
+			"SeDelegateSessionUserImpersonatePrivilege" = "Obtain an impersonation token for another user in the same session"
+			"SeSynchronizePrivilege"				    = "Required to use the object wait functions"
+			"SePrivilegeNotHeld"					    = "Privilege not held"
+		}
+		try
+		{
+			# Attempt to reference the 'Win32.AdvApi32' type to check if it already exists.
+			# Casting to [void] suppresses any output or errors if the type doesn't exist.
+			[void][Win32.AdvApi32]
+		}
+		catch
+		{
+			# If the type does not exist, an exception is thrown and caught here.
+			# We proceed to define the type using the Add-Type cmdlet.
+			
+			# Use Add-Type to define a new .NET type in C# code.
+			# The -TypeDefinition parameter accepts a string containing the C# code.
+			Add-Type -TypeDefinition @"
+    // Include necessary namespaces for the C# code.
+    using System;
+    using System.Runtime.InteropServices;
+    using System.Text;
+
+    // Define a namespace called 'Win32' to contain our class.
+    namespace Win32
+    {
+        // Define a public class 'AdvApi32' to hold our P/Invoke method.
+        public class AdvApi32
+        {
+            // Use the DllImport attribute to import the 'LookupPrivilegeDisplayName' function from 'advapi32.dll'.
+            // SetLastError = true allows us to retrieve error information if the call fails.
+            [DllImport("advapi32.dll", SetLastError = true)]
+            public static extern bool LookupPrivilegeDisplayName(
+              string systemName,         // The name of the target system (null for local).
+              string privilegeName,      // The name of the privilege to look up.
+              StringBuilder displayName, // A StringBuilder to receive the privilege's display name.
+              ref uint cbDisplayName,    // The size of the displayName buffer; updated with the actual size used.
+              out uint languageId        // Receives the language identifier for the returned display name.
+            );
+        }
+    }
+"@ -PassThru | Out-Null
+			# -PassThru outputs the generated type, but we pipe it to Out-Null to suppress output.
+		}
+		
+		
+		# Use LookupPrivilegeDisplayName Win32 API to get display name of privilege
+		# (except for user logon rights)
+		function Get-PrivilegeDisplayName
+		{
+			param (
+				[String]$name # The privilege name to look up
+			)
+			
+			# Create a StringBuilder object to receive the display name of the privilege
+			$displayNameSB = New-Object System.Text.StringBuilder 1024
+			$languageId = 0
+			
+			# Call the LookupPrivilegeDisplayName API function to get the display name
+			$ok = [Win32.AdvApi32]::LookupPrivilegeDisplayName($null, $name, $displayNameSB, [Ref]$displayNameSB.Capacity, [Ref]$languageId)
+			
+			# If the API call is successful, return the display name as a string
+			if ($ok)
+			{
+				return $displayNameSB.ToString()
+			}
+			# If the API call fails, check the hashtable for the privilege name
+			else
+			{
+				# Use an if statement to check if the key exists in the hashtable
+				if ($UserLogonRights[$name])
+				{
+					return $UserLogonRights[$name]
+				}
+				else
+				{
+					return $name
+				}
+			}
+		}
+		
+		
+		# Outputs list of hashtables as a PSObject
+		function Out-Object
+		{
+			param (
+				[System.Collections.Hashtable[]]$hashData
+			)
+			$order = @()
+			$result = @{ }
+			$hashData | ForEach-Object {
+				$order += ($_.Keys -as [Array])[0]
+				$result += $_
+			}
+			$out = New-Object PSObject -Property $result | Select-Object $order
+			return $out
+		}
+		# Translates a SID in the form *S-1-5-... to its account name;
+		function Get-AccountName
+		{
+			param (
+				[String]$principal
+			)
+			try
+			{
+				$sid = New-Object System.Security.Principal.SecurityIdentifier($principal.Substring(1))
+				$sid.Translate([Security.Principal.NTAccount])
+			}
+			catch { $principal }
+		}
+		$TemplateFilename = Join-Path ([IO.Path]::GetTempPath()) ([IO.Path]::GetRandomFileName())
+		$LogFilename = Join-Path ([IO.Path]::GetTempPath()) ([IO.Path]::GetRandomFileName())
+		$StdOut = & $SecEdit /export /cfg $TemplateFilename /areas USER_RIGHTS /log $LogFilename
+		Write-Verbose "$StdOut"
+		if ($LASTEXITCODE -eq 0)
+		{
+			$dtable = $null
+			$dtable = New-Object System.Data.DataTable
+			$dtable.Columns.Add("Privilege", "System.String") | Out-Null
+			$dtable.Columns.Add("PrivilegeName", "System.String") | Out-Null
+			$dtable.Columns.Add("Principal", "System.String") | Out-Null
+			$dtable.Columns.Add("ComputerName", "System.String") | Out-Null
+			Select-String '^(Se\S+) = (\S+)' $TemplateFilename | Foreach-Object {
+				$Privilege = $_.Matches[0].Groups[1].Value
+				$Principals = $_.Matches[0].Groups[2].Value -split ','
+				foreach ($Principal in $Principals)
+				{
+					$PrincipalName = Get-AccountName $Principal
+					
+					# If $UserName is provided, filter the output
+					if (-not $UserName -or ($UserName -contains $PrincipalName))
+					{
+						$nRow = $dtable.NewRow()
+						$nRow.Privilege = $Privilege
+						$nRow.PrivilegeName = Get-PrivilegeDisplayName $Privilege
+						$nRow.Principal = $PrincipalName
+						$nRow.ComputerName = $env:COMPUTERNAME
+						$dtable.Rows.Add($nRow)
+					}
+				}
+				return $dtable
+			}
+		}
+		else
+		{
+			$OFS = ""
+			Write-Error "$StdOut"
+		}
+		Remove-Item $TemplateFilename, $LogFilename -ErrorAction SilentlyContinue
+	}
 	if (!$PassThru)
 	{
-		Write-Output "$(Time-Stamp)Starting main script execution."
+		Write-Output "$(Time-Stamp)Starting get user rights script execution."
 	}
 	#endregion Initialization
 }
@@ -122,19 +388,24 @@ PROCESS
 		(
 			[Parameter(ValueFromPipeline = $true,
 					   Position = 0,
-					   HelpMessage = '(Server1, Server2) Comma separated list of servers you want to run this script against. To run locally, run without this switch. This argument accepts values from the pipeline.')]
+					   HelpMessage = '(Server1, Server2) Comma-separated list of servers you want to run this script against. To run locally, run without this parameter. This argument accepts values from the pipeline.')]
 			[Alias('servers')]
 			[array]$ComputerName,
 			[Parameter(Position = 1,
-					   HelpMessage = '(ex. C:\Temp) Location to store the Output File. Set the Type with FileOutputType')]
+					   HelpMessage = 'Specifies the usernames to filter the results.')]
+			[Alias('user')]
+			[array]$UserName,
+			[Parameter(Position = 2,
+					   HelpMessage = '(e.g., C:\Temp) Location to store the output file. Set the type with FileOutputType.')]
+			[Alias('path')]
 			[string]$FileOutputPath,
-			[Parameter(Mandatory = $false,
-					   Position = 2,
-					   HelpMessage = '(CSV or Text) Set the type of file you would like to output as. Combine with the OutputPath parameter.')]
-			[ValidateSet('CSV', 'Text', '')]
-			[string]$FileOutputType,
 			[Parameter(Position = 3,
-					   HelpMessage = 'Output as an object that you can manipulate / access.')]
+					   HelpMessage = '(CSV or Text) Sets the type of file you would like to output. Combine with the FileOutputPath parameter.')]
+			[ValidateSet('CSV', 'Text', '')]
+			[Alias('type')]
+			[string]$FileOutputType,
+			[Parameter(Position = 4,
+					   HelpMessage = 'Outputs the result as an object that you can manipulate or access.')]
 			[switch]$PassThru
 		)
 		if (!$ComputerName)
@@ -151,266 +422,19 @@ PROCESS
 			#region Non-LocalMachine
 			if ($ComputerName -notmatch $env:COMPUTERNAME)
 			{
+				$GetSecurityPolicyFunction = "function Get-SecurityPolicy { ${function:Get-SecurityPolicy} }"
 				$localrights += Invoke-Command -ScriptBlock {
-					param ([int]$VerbosePreference)
-					function Get-SecurityPolicy
-					{
-						#requires -version 2
-						# Fail script if we can't find SecEdit.exe
-						$SecEdit = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) "SecEdit.exe"
-						if (-not (Test-Path $SecEdit))
-						{
-							Write-Error "File not found - '$SecEdit'" -Category ObjectNotFound
-							return
-						}
-						Write-Verbose "Found Executable: $SecEdit"
-						# LookupPrivilegeDisplayName Win32 API doesn't resolve logon right display
-						# names, so use this hashtable
-						$UserLogonRights = @{
-							"SeBatchLogonRight"				    = "Log on as a batch job"
-							"SeDenyBatchLogonRight"			    = "Deny log on as a batch job"
-							"SeDenyInteractiveLogonRight"	    = "Deny log on locally"
-							"SeDenyNetworkLogonRight"		    = "Deny access to this computer from the network"
-							"SeDenyRemoteInteractiveLogonRight" = "Deny log on through Remote Desktop Services"
-							"SeDenyServiceLogonRight"		    = "Deny log on as a service"
-							"SeInteractiveLogonRight"		    = "Allow log on locally"
-							"SeNetworkLogonRight"			    = "Access this computer from the network"
-							"SeRemoteInteractiveLogonRight"	    = "Allow log on through Remote Desktop Services"
-							"SeServiceLogonRight"			    = "Log on as a service"
-						}
-						# Create type to invoke LookupPrivilegeDisplayName Win32 API
-						$Win32APISignature = @'
-[DllImport("advapi32.dll", SetLastError=true)]
-public static extern bool LookupPrivilegeDisplayName(
-  string systemName,
-  string privilegeName,
-  System.Text.StringBuilder displayName,
-  ref uint cbDisplayName,
-  out uint languageId
-);
-'@
-						$AdvApi32 = Add-Type advapi32 $Win32APISignature -Namespace LookupPrivilegeDisplayName -PassThru
-						# Use LookupPrivilegeDisplayName Win32 API to get display name of privilege
-						# (except for user logon rights)
-						function Get-PrivilegeDisplayName
-						{
-							param (
-								[String]$name
-							)
-							$displayNameSB = New-Object System.Text.StringBuilder 1024
-							$languageId = 0
-							$ok = $AdvApi32::LookupPrivilegeDisplayName($null, $name, $displayNameSB, [Ref]$displayNameSB.Capacity, [Ref]$languageId)
-							if ($ok)
-							{
-								$displayNameSB.ToString()
-							}
-							else
-							{
-								# Doesn't lookup logon rights, so use hashtable for that
-								if ($UserLogonRights[$name])
-								{
-									$UserLogonRights[$name]
-								}
-								else
-								{
-									$name
-								}
-							}
-						}
-						# Outputs list of hashtables as a PSObject
-						function Out-Object
-						{
-							param (
-								[System.Collections.Hashtable[]]$hashData
-							)
-							$order = @()
-							$result = @{ }
-							$hashData | ForEach-Object {
-								$order += ($_.Keys -as [Array])[0]
-								$result += $_
-							}
-							$out = New-Object PSObject -Property $result | Select-Object $order
-							return $out
-						}
-						# Translates a SID in the form *S-1-5-... to its account name;
-						function Get-AccountName
-						{
-							param (
-								[String]$principal
-							)
-							try
-							{
-								$sid = New-Object System.Security.Principal.SecurityIdentifier($principal.Substring(1))
-								$sid.Translate([Security.Principal.NTAccount])
-							}
-							catch { $principal }
-						}
-						$TemplateFilename = Join-Path ([IO.Path]::GetTempPath()) ([IO.Path]::GetRandomFileName())
-						$LogFilename = Join-Path ([IO.Path]::GetTempPath()) ([IO.Path]::GetRandomFileName())
-						$StdOut = & $SecEdit /export /cfg $TemplateFilename /areas USER_RIGHTS /log $LogFilename
-						Write-Verbose "$StdOut"
-						if ($LASTEXITCODE -eq 0)
-						{
-							$dtable = $null
-							$dtable = New-Object System.Data.DataTable
-							$dtable.Columns.Add("Privilege", "System.String") | Out-Null
-							$dtable.Columns.Add("PrivilegeName", "System.String") | Out-Null
-							$dtable.Columns.Add("Principal", "System.String") | Out-Null
-							$dtable.Columns.Add("ComputerName", "System.String") | Out-Null
-							Select-String '^(Se\S+) = (\S+)' $TemplateFilename | Foreach-Object {
-								$Privilege = $_.Matches[0].Groups[1].Value
-								$Principals = $_.Matches[0].Groups[2].Value -split ','
-								foreach ($Principal in $Principals)
-								{
-									$nRow = $dtable.NewRow()
-									$nRow.Privilege = $Privilege
-									$nRow.PrivilegeName = Get-PrivilegeDisplayName $Privilege
-									$nRow.Principal = Get-AccountName $Principal
-									$nRow.ComputerName = $env:COMPUTERNAME
-									$dtable.Rows.Add($nRow)
-								}
-								return $dtable
-							}
-						}
-						else
-						{
-							$OFS = ""
-							Write-Error "$StdOut"
-						}
-						Remove-Item $TemplateFilename, $LogFilename -ErrorAction SilentlyContinue
-					}
-					return Get-SecurityPolicy
-				} -ArgumentList $VerbosePreference -computer $ComputerName -HideComputerName | Select-Object * -ExcludeProperty RunspaceID, PSShowComputerName, PSComputerName -Unique
+					param ($GetSecurityPolicyFunctionContents,
+						$UserName,
+						[int]$VerbosePreference)
+					. ([ScriptBlock]::Create($GetSecurityPolicyFunctionContents))
+					return Get-SecurityPolicy -UserName $UserName
+				} -ArgumentList $GetSecurityPolicyFunction, $UserName, $VerbosePreference -ComputerName $ComputerName -HideComputerName | Select-Object * -ExcludeProperty RunspaceID, PSShowComputerName, PSComputerName -Unique
 			} #endregion Non-LocalMachine
-			else #region LocalMachine
+			else
+			#region LocalMachine
 			{
-				function Get-SecurityPolicy
-				{
-					#requires -version 2
-					# Fail script if we can't find SecEdit.exe
-					$SecEdit = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::System)) "SecEdit.exe"
-					if (-not (Test-Path $SecEdit))
-					{
-						Write-Error "File not found - '$SecEdit'" -Category ObjectNotFound
-						return
-					}
-					Write-Verbose "Found Executable: $SecEdit"
-					# LookupPrivilegeDisplayName Win32 API doesn't resolve logon right display
-					# names, so use this hashtable
-					$UserLogonRights = @{
-						"SeBatchLogonRight"				    = "Log on as a batch job"
-						"SeDenyBatchLogonRight"			    = "Deny log on as a batch job"
-						"SeDenyInteractiveLogonRight"	    = "Deny log on locally"
-						"SeDenyNetworkLogonRight"		    = "Deny access to this computer from the network"
-						"SeDenyRemoteInteractiveLogonRight" = "Deny log on through Remote Desktop Services"
-						"SeDenyServiceLogonRight"		    = "Deny log on as a service"
-						"SeInteractiveLogonRight"		    = "Allow log on locally"
-						"SeNetworkLogonRight"			    = "Access this computer from the network"
-						"SeRemoteInteractiveLogonRight"	    = "Allow log on through Remote Desktop Services"
-						"SeServiceLogonRight"			    = "Log on as a service"
-					}
-					# Create type to invoke LookupPrivilegeDisplayName Win32 API
-					$Win32APISignature = @'
-[DllImport("advapi32.dll", SetLastError=true)]
-public static extern bool LookupPrivilegeDisplayName(
-  string systemName,
-  string privilegeName,
-  System.Text.StringBuilder displayName,
-  ref uint cbDisplayName,
-  out uint languageId
-);
-'@
-					$AdvApi32 = Add-Type advapi32 $Win32APISignature -Namespace LookupPrivilegeDisplayName -PassThru
-					# Use LookupPrivilegeDisplayName Win32 API to get display name of privilege
-					# (except for user logon rights)
-					function Get-PrivilegeDisplayName
-					{
-						param (
-							[String]$name
-						)
-						$displayNameSB = New-Object System.Text.StringBuilder 1024
-						$languageId = 0
-						$ok = $AdvApi32::LookupPrivilegeDisplayName($null, $name, $displayNameSB, [Ref]$displayNameSB.Capacity, [Ref]$languageId)
-						if ($ok)
-						{
-							$displayNameSB.ToString()
-						}
-						else
-						{
-							# Doesn't lookup logon rights, so use hashtable for that
-							if ($UserLogonRights[$name])
-							{
-								$UserLogonRights[$name]
-							}
-							else
-							{
-								$name
-							}
-						}
-					}
-					# Outputs list of hashtables as a PSObject
-					function Out-Object
-					{
-						param (
-							[System.Collections.Hashtable[]]$hashData
-						)
-						$order = @()
-						$result = @{ }
-						$hashData | ForEach-Object {
-							$order += ($_.Keys -as [Array])[0]
-							$result += $_
-						}
-						$out = New-Object PSObject -Property $result | Select-Object $order
-						return $out
-					}
-					# Translates a SID in the form *S-1-5-... to its account name;
-					function Get-AccountName
-					{
-						param (
-							[String]$principal
-						)
-						try
-						{
-							$sid = New-Object System.Security.Principal.SecurityIdentifier($principal.Substring(1))
-							$sid.Translate([Security.Principal.NTAccount])
-						}
-						catch { $principal }
-					}
-					$TemplateFilename = Join-Path ([IO.Path]::GetTempPath()) ([IO.Path]::GetRandomFileName())
-					$LogFilename = Join-Path ([IO.Path]::GetTempPath()) ([IO.Path]::GetRandomFileName())
-					$StdOut = & $SecEdit /export /cfg $TemplateFilename /areas USER_RIGHTS /log $LogFilename
-					Write-Verbose "$StdOut"
-					if ($LASTEXITCODE -eq 0)
-					{
-						$dtable = $null
-						$dtable = New-Object System.Data.DataTable
-						$dtable.Columns.Add("Privilege", "System.String") | Out-Null
-						$dtable.Columns.Add("PrivilegeName", "System.String") | Out-Null
-						$dtable.Columns.Add("Principal", "System.String") | Out-Null
-						$dtable.Columns.Add("ComputerName", "System.String") | Out-Null
-						Select-String '^(Se\S+) = (\S+)' $TemplateFilename | Foreach-Object {
-							$Privilege = $_.Matches[0].Groups[1].Value
-							$Principals = $_.Matches[0].Groups[2].Value -split ','
-							foreach ($Principal in $Principals)
-							{
-								$nRow = $dtable.NewRow()
-								$nRow.Privilege = $Privilege
-								$nRow.PrivilegeName = Get-PrivilegeDisplayName $Privilege
-								$nRow.Principal = Get-AccountName $Principal
-								$nRow.ComputerName = $env:COMPUTERNAME
-								$dtable.Rows.Add($nRow)
-							}
-							return $dtable
-						}
-					}
-					else
-					{
-						$OFS = ""
-						Write-Error "$StdOut"
-					}
-					Remove-Item $TemplateFilename, $LogFilename -ErrorAction SilentlyContinue
-				}
-				$localrights += Get-SecurityPolicy
+				$localrights += Get-SecurityPolicy -UserName $UserName
 			} #endregion LocalMachine
 			$output += $localrights
 			if (!$PassThru)
@@ -452,63 +476,65 @@ public static extern bool LookupPrivilegeDisplayName(
 		}
 	}
 	#endregion MainFunctionSection
-	if ($FileOutputPath -or $FileOutputType -or $ComputerName -or $PassThru)
+	if ($FileOutputPath -or $UserName -or $FileOutputType -or $ComputerName -or $PassThru)
 	{
-		Get-UserRights -FileOutputPath:$FileOutputPath -FileOutputType:$FileOutputType -ComputerName:$ComputerName -PassThru:$PassThru
+		Get-UserRights -UserName $UserName -FileOutputPath:$FileOutputPath -FileOutputType:$FileOutputType -ComputerName:$ComputerName -PassThru:$PassThru
 	}
 	else
 	{
-     <# Edit line 467 to modify the default command run when this script is executed.
-       Example for output multiple servers to a text file: 
-         Get-UserRights -ComputerName MS01-2019, IIS-2019 -FileOutputPath C:\Temp -FileOutputType Text
-       Example for gathering locally:
-         Get-UserRights
-       #>
+		<# 
+		Edit line 494 to modify the default command run when this script is executed.
+		Example:
+			For outputting multiple servers to a text file: 
+				Get-UserRights -ComputerName MS01-2019, IIS-2019 -FileOutputPath C:\Temp -FileOutputType Text
+			or
+			Example for gathering locally:
+				Get-UserRights
+		#>
 		Get-UserRights
 	}
 }
 END
 {
 	Write-Verbose "$(Time-Stamp)Script Completed!"
-}
 
 # SIG # Begin signature block
-# MIInlQYJKoZIhvcNAQcCoIInhjCCJ4ICAQExDzANBglghkgBZQMEAgEFADB5Bgor
+# MIIoSAYJKoZIhvcNAQcCoIIoOTCCKDUCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBhR0JZ8h2Qz0Rd
-# FP++DBymbhTy4yeaI/Eq85nv0wLCBKCCDXYwggX0MIID3KADAgECAhMzAAACy7d1
-# OfsCcUI2AAAAAALLMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNVBAYTAlVTMRMwEQYD
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBvJCaUms5HKTyl
+# /Ib2Cxj6rh5pQTdt4IE5UMe8yV/bQKCCDXYwggX0MIID3KADAgECAhMzAAADrzBA
+# DkyjTQVBAAAAAAOvMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNVBAYTAlVTMRMwEQYD
 # VQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYDVQQKExVNaWNy
 # b3NvZnQgQ29ycG9yYXRpb24xKDAmBgNVBAMTH01pY3Jvc29mdCBDb2RlIFNpZ25p
-# bmcgUENBIDIwMTEwHhcNMjIwNTEyMjA0NTU5WhcNMjMwNTExMjA0NTU5WjB0MQsw
+# bmcgUENBIDIwMTEwHhcNMjMxMTE2MTkwOTAwWhcNMjQxMTE0MTkwOTAwWjB0MQsw
 # CQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMHUmVkbW9u
 # ZDEeMBwGA1UEChMVTWljcm9zb2Z0IENvcnBvcmF0aW9uMR4wHAYDVQQDExVNaWNy
 # b3NvZnQgQ29ycG9yYXRpb24wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIB
-# AQC3sN0WcdGpGXPZIb5iNfFB0xZ8rnJvYnxD6Uf2BHXglpbTEfoe+mO//oLWkRxA
-# wppditsSVOD0oglKbtnh9Wp2DARLcxbGaW4YanOWSB1LyLRpHnnQ5POlh2U5trg4
-# 3gQjvlNZlQB3lL+zrPtbNvMA7E0Wkmo+Z6YFnsf7aek+KGzaGboAeFO4uKZjQXY5
-# RmMzE70Bwaz7hvA05jDURdRKH0i/1yK96TDuP7JyRFLOvA3UXNWz00R9w7ppMDcN
-# lXtrmbPigv3xE9FfpfmJRtiOZQKd73K72Wujmj6/Su3+DBTpOq7NgdntW2lJfX3X
-# a6oe4F9Pk9xRhkwHsk7Ju9E/AgMBAAGjggFzMIIBbzAfBgNVHSUEGDAWBgorBgEE
-# AYI3TAgBBggrBgEFBQcDAzAdBgNVHQ4EFgQUrg/nt/gj+BBLd1jZWYhok7v5/w4w
+# AQDOS8s1ra6f0YGtg0OhEaQa/t3Q+q1MEHhWJhqQVuO5amYXQpy8MDPNoJYk+FWA
+# hePP5LxwcSge5aen+f5Q6WNPd6EDxGzotvVpNi5ve0H97S3F7C/axDfKxyNh21MG
+# 0W8Sb0vxi/vorcLHOL9i+t2D6yvvDzLlEefUCbQV/zGCBjXGlYJcUj6RAzXyeNAN
+# xSpKXAGd7Fh+ocGHPPphcD9LQTOJgG7Y7aYztHqBLJiQQ4eAgZNU4ac6+8LnEGAL
+# go1ydC5BJEuJQjYKbNTy959HrKSu7LO3Ws0w8jw6pYdC1IMpdTkk2puTgY2PDNzB
+# tLM4evG7FYer3WX+8t1UMYNTAgMBAAGjggFzMIIBbzAfBgNVHSUEGDAWBgorBgEE
+# AYI3TAgBBggrBgEFBQcDAzAdBgNVHQ4EFgQURxxxNPIEPGSO8kqz+bgCAQWGXsEw
 # RQYDVR0RBD4wPKQ6MDgxHjAcBgNVBAsTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjEW
-# MBQGA1UEBRMNMjMwMDEyKzQ3MDUyODAfBgNVHSMEGDAWgBRIbmTlUAXTgqoXNzci
+# MBQGA1UEBRMNMjMwMDEyKzUwMTgyNjAfBgNVHSMEGDAWgBRIbmTlUAXTgqoXNzci
 # tW2oynUClTBUBgNVHR8ETTBLMEmgR6BFhkNodHRwOi8vd3d3Lm1pY3Jvc29mdC5j
 # b20vcGtpb3BzL2NybC9NaWNDb2RTaWdQQ0EyMDExXzIwMTEtMDctMDguY3JsMGEG
 # CCsGAQUFBwEBBFUwUzBRBggrBgEFBQcwAoZFaHR0cDovL3d3dy5taWNyb3NvZnQu
 # Y29tL3BraW9wcy9jZXJ0cy9NaWNDb2RTaWdQQ0EyMDExXzIwMTEtMDctMDguY3J0
-# MAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQELBQADggIBAJL5t6pVjIRlQ8j4dAFJ
-# ZnMke3rRHeQDOPFxswM47HRvgQa2E1jea2aYiMk1WmdqWnYw1bal4IzRlSVf4czf
-# zx2vjOIOiaGllW2ByHkfKApngOzJmAQ8F15xSHPRvNMmvpC3PFLvKMf3y5SyPJxh
-# 922TTq0q5epJv1SgZDWlUlHL/Ex1nX8kzBRhHvc6D6F5la+oAO4A3o/ZC05OOgm4
-# EJxZP9MqUi5iid2dw4Jg/HvtDpCcLj1GLIhCDaebKegajCJlMhhxnDXrGFLJfX8j
-# 7k7LUvrZDsQniJZ3D66K+3SZTLhvwK7dMGVFuUUJUfDifrlCTjKG9mxsPDllfyck
-# 4zGnRZv8Jw9RgE1zAghnU14L0vVUNOzi/4bE7wIsiRyIcCcVoXRneBA3n/frLXvd
-# jDsbb2lpGu78+s1zbO5N0bhHWq4j5WMutrspBxEhqG2PSBjC5Ypi+jhtfu3+x76N
-# mBvsyKuxx9+Hm/ALnlzKxr4KyMR3/z4IRMzA1QyppNk65Ui+jB14g+w4vole33M1
-# pVqVckrmSebUkmjnCshCiH12IFgHZF7gRwE4YZrJ7QjxZeoZqHaKsQLRMp653beB
-# fHfeva9zJPhBSdVcCW7x9q0c2HVPLJHX9YCUU714I+qtLpDGrdbZxD9mikPqL/To
-# /1lDZ0ch8FtePhME7houuoPcMIIHejCCBWKgAwIBAgIKYQ6Q0gAAAAAAAzANBgkq
+# MAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQELBQADggIBAISxFt/zR2frTFPB45Yd
+# mhZpB2nNJoOoi+qlgcTlnO4QwlYN1w/vYwbDy/oFJolD5r6FMJd0RGcgEM8q9TgQ
+# 2OC7gQEmhweVJ7yuKJlQBH7P7Pg5RiqgV3cSonJ+OM4kFHbP3gPLiyzssSQdRuPY
+# 1mIWoGg9i7Y4ZC8ST7WhpSyc0pns2XsUe1XsIjaUcGu7zd7gg97eCUiLRdVklPmp
+# XobH9CEAWakRUGNICYN2AgjhRTC4j3KJfqMkU04R6Toyh4/Toswm1uoDcGr5laYn
+# TfcX3u5WnJqJLhuPe8Uj9kGAOcyo0O1mNwDa+LhFEzB6CB32+wfJMumfr6degvLT
+# e8x55urQLeTjimBQgS49BSUkhFN7ois3cZyNpnrMca5AZaC7pLI72vuqSsSlLalG
+# OcZmPHZGYJqZ0BacN274OZ80Q8B11iNokns9Od348bMb5Z4fihxaBWebl8kWEi2O
+# PvQImOAeq3nt7UWJBzJYLAGEpfasaA3ZQgIcEXdD+uwo6ymMzDY6UamFOfYqYWXk
+# ntxDGu7ngD2ugKUuccYKJJRiiz+LAUcj90BVcSHRLQop9N8zoALr/1sJuwPrVAtx
+# HNEgSW+AKBqIxYWM4Ev32l6agSUAezLMbq5f3d8x9qzT031jMDT+sUAoCw0M5wVt
+# CUQcqINPuYjbS1WgJyZIiEkBMIIHejCCBWKgAwIBAgIKYQ6Q0gAAAAAAAzANBgkq
 # hkiG9w0BAQsFADCBiDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24x
 # EDAOBgNVBAcTB1JlZG1vbmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlv
 # bjEyMDAGA1UEAxMpTWljcm9zb2Z0IFJvb3QgQ2VydGlmaWNhdGUgQXV0aG9yaXR5
@@ -548,141 +574,144 @@ END
 # XJbYANahRr1Z85elCUtIEJmAH9AAKcWxm6U/RXceNcbSoqKfenoi+kiVH6v7RyOA
 # 9Z74v2u3S5fi63V4GuzqN5l5GEv/1rMjaHXmr/r8i+sLgOppO6/8MO0ETI7f33Vt
 # Y5E90Z1WTk+/gFcioXgRMiF670EKsT/7qMykXcGhiJtXcVZOSEXAQsmbdlsKgEhr
-# /Xmfwb1tbWrJUnMTDXpQzTGCGXUwghlxAgEBMIGVMH4xCzAJBgNVBAYTAlVTMRMw
+# /Xmfwb1tbWrJUnMTDXpQzTGCGigwghokAgEBMIGVMH4xCzAJBgNVBAYTAlVTMRMw
 # EQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYDVQQKExVN
 # aWNyb3NvZnQgQ29ycG9yYXRpb24xKDAmBgNVBAMTH01pY3Jvc29mdCBDb2RlIFNp
-# Z25pbmcgUENBIDIwMTECEzMAAALLt3U5+wJxQjYAAAAAAsswDQYJYIZIAWUDBAIB
+# Z25pbmcgUENBIDIwMTECEzMAAAOvMEAOTKNNBUEAAAAAA68wDQYJYIZIAWUDBAIB
 # BQCggbAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGCNwIBCzEO
-# MAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPN7PbSgF1cuGGyP7hwfc21P
-# ng2apXjGVbhbBGMKB6gTMEQGCisGAQQBgjcCAQwxNjA0oBSAEgBNAGkAYwByAG8A
+# MAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILpYZ673HJepiTsZe8BUu1Cw
+# 0clI2RLsCrojNSMdkcHAMEQGCisGAQQBgjcCAQwxNjA0oBSAEgBNAGkAYwByAG8A
 # cwBvAGYAdKEcgBpodHRwczovL3d3dy5taWNyb3NvZnQuY29tIDANBgkqhkiG9w0B
-# AQEFAASCAQB31dkDpaEsSAJTIZonsJ0v4KPwRxTLCHypwvuHSfB2XuVj1UVut+gP
-# oMJlY3coAR5DoDPp1E406HhpN1ndOFKVmVEGAKG1M+2mZEBsvcriVFit6Mggcr98
-# LYD5sHfvbZOUHDbtadJ3cLyCD4Rrw/FIHvjmLdEUpVdmB37GXIS6mUZCOviQ0kGR
-# 6y58vCry2flPGtXyMvhOjT3AbcbVODtlkt2nP0jNN/UcqWYMI7rplr/S8dljGO2o
-# zWTgTRK56ulhF/0eIuW6kdP+3mspVH9wYCBAwt8lmhpn6lmYXzbwUbGwhSdon2Ui
-# W7DvIyOkcXxgh8E9cZaa5+aWJvKucYBsoYIW/TCCFvkGCisGAQQBgjcDAwExghbp
-# MIIW5QYJKoZIhvcNAQcCoIIW1jCCFtICAQMxDzANBglghkgBZQMEAgEFADCCAVEG
-# CyqGSIb3DQEJEAEEoIIBQASCATwwggE4AgEBBgorBgEEAYRZCgMBMDEwDQYJYIZI
-# AWUDBAIBBQAEIDFKR2nlckUXMg5smGb/GFl7I+sQGps7xAhCwvSSe/zhAgZjbOxy
-# qokYEzIwMjIxMTI5MjAzMDMyLjIzM1owBIACAfSggdCkgc0wgcoxCzAJBgNVBAYT
+# AQEFAASCAQC0hrsW2Pdd/WAIxZfa2NLww+AjZGtmAPnGBZGGumo8bqyJUCMhc1WS
+# e/cfSUHU/8vu31YeDoqIz7BWefuuHsofc7sKv4A7+DeXXxp9XEkxNeU1QX3ZJya1
+# dpxx8IWxXGV3HDWZwOpaUE+Yp0Dur4nyyqBfKBO6TC9BmwkUyJFS9UpD3LlVqBja
+# oDznMpAM9ebjQNOtXW6x6Wj7O75A1Dx6ZtHhK47DZo8mL1sET1ue/h+y5Ok8Rhok
+# /Q8FFY2qKoDavJLG0Z38pfWigBn5osFZEjzIPaU0r01rm9bikif1AVY3Df/7bjWS
+# FHvmXRnBwrrqS2goY5b+d3mMtvjqFhgCoYIXsDCCF6wGCisGAQQBgjcDAwExghec
+# MIIXmAYJKoZIhvcNAQcCoIIXiTCCF4UCAQMxDzANBglghkgBZQMEAgEFADCCAVoG
+# CyqGSIb3DQEJEAEEoIIBSQSCAUUwggFBAgEBBgorBgEEAYRZCgMBMDEwDQYJYIZI
+# AWUDBAIBBQAEIPCSHGnwLh55UJzOkOMy/KhA4lwNehJHm3EvX4w12pgBAgZm60my
+# 35EYEzIwMjQxMDA3MTc1MDA4LjY0MlowBIACAfSggdmkgdYwgdMxCzAJBgNVBAYT
 # AlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYD
-# VQQKExVNaWNyb3NvZnQgQ29ycG9yYXRpb24xJTAjBgNVBAsTHE1pY3Jvc29mdCBB
-# bWVyaWNhIE9wZXJhdGlvbnMxJjAkBgNVBAsTHVRoYWxlcyBUU1MgRVNOOjNCQkQt
-# RTMzOC1FOUExMSUwIwYDVQQDExxNaWNyb3NvZnQgVGltZS1TdGFtcCBTZXJ2aWNl
-# oIIRVDCCBwwwggT0oAMCAQICEzMAAAHGMM0u1tOhwPQAAQAAAcYwDQYJKoZIhvcN
-# AQELBQAwfDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAOBgNV
+# VQQKExVNaWNyb3NvZnQgQ29ycG9yYXRpb24xLTArBgNVBAsTJE1pY3Jvc29mdCBJ
+# cmVsYW5kIE9wZXJhdGlvbnMgTGltaXRlZDEnMCUGA1UECxMeblNoaWVsZCBUU1Mg
+# RVNOOjRDMUEtMDVFMC1EOTQ3MSUwIwYDVQQDExxNaWNyb3NvZnQgVGltZS1TdGFt
+# cCBTZXJ2aWNloIIR/jCCBygwggUQoAMCAQICEzMAAAH/Ejh898Fl1qEAAQAAAf8w
+# DQYJKoZIhvcNAQELBQAwfDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldhc2hpbmd0
+# b24xEDAOBgNVBAcTB1JlZG1vbmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3Jh
+# dGlvbjEmMCQGA1UEAxMdTWljcm9zb2Z0IFRpbWUtU3RhbXAgUENBIDIwMTAwHhcN
+# MjQwNzI1MTgzMTE5WhcNMjUxMDIyMTgzMTE5WjCB0zELMAkGA1UEBhMCVVMxEzAR
+# BgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1JlZG1vbmQxHjAcBgNVBAoTFU1p
+# Y3Jvc29mdCBDb3Jwb3JhdGlvbjEtMCsGA1UECxMkTWljcm9zb2Z0IElyZWxhbmQg
+# T3BlcmF0aW9ucyBMaW1pdGVkMScwJQYDVQQLEx5uU2hpZWxkIFRTUyBFU046NEMx
+# QS0wNUUwLUQ5NDcxJTAjBgNVBAMTHE1pY3Jvc29mdCBUaW1lLVN0YW1wIFNlcnZp
+# Y2UwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDJ6JXSkHtuDz+pz+aS
+# IN0lefMlY9iCT2ZMZ4jenNCmzKtElERZwpgd3/11v6DfPh1ThUKQBkReq+TE/lA1
+# O0Ebkil7GmmHg+FuIkrC9f5RLgqRIWF/XB+UMBjW270JCqGHF8cVXu+G2aocsIKY
+# PGFk+YIGH39d8UlAhTBVlHxG1SSDOY31uZaJiB9fRH5sMCedxR22nXGMaYKl0EzK
+# CT8rSHdtRNTNAdviQ9/bKWQo+hYVifYY1iBbDw8YFQ7S9MwqNgPqkt4E/SFkOHk/
+# d/jGEYubrH3zG4hCn9EWfMFuC2HJJcaX41PVxkCobISFPsvRJ1HupCW/mnAM16ts
+# rdhIQMqTewOH1LrSEsk2o/vWIcqQbXvkcDKDrOYTmnd842v398gSk8CULxiKzFdo
+# ZfhGkMFhUqkaPQUJnCKyJmzGbRf3DplKTw45d/wnFNhYip9G5bN1SKvRneOI461o
+# Ortd3KkHiBmuGv3Qpw9MNHC/LrTOtBxr/UPUns9AkAk5tuJpuiLXa6xXxrG2VP90
+# J48Lid1wVxqvW/5+cKWGz27cWfouQcNFl83OFeAsMTBvp0DjLezob6BDfmj3SPaL
+# pqZprwmxX9wIX6INIbMDFljWxDWat0ybPF9bNc3qw8kzLj212xZMiBlZU5JL25Qe
+# FJiRuAzGct6Ipd4HkwH1Axw5JwIDAQABo4IBSTCCAUUwHQYDVR0OBBYEFMP6leT+
+# tP93sT/RATuEfTDP7pRhMB8GA1UdIwQYMBaAFJ+nFV0AXmJdg/Tl0mWnG1M1Gely
+# MF8GA1UdHwRYMFYwVKBSoFCGTmh0dHA6Ly93d3cubWljcm9zb2Z0LmNvbS9wa2lv
+# cHMvY3JsL01pY3Jvc29mdCUyMFRpbWUtU3RhbXAlMjBQQ0ElMjAyMDEwKDEpLmNy
+# bDBsBggrBgEFBQcBAQRgMF4wXAYIKwYBBQUHMAKGUGh0dHA6Ly93d3cubWljcm9z
+# b2Z0LmNvbS9wa2lvcHMvY2VydHMvTWljcm9zb2Z0JTIwVGltZS1TdGFtcCUyMFBD
+# QSUyMDIwMTAoMSkuY3J0MAwGA1UdEwEB/wQCMAAwFgYDVR0lAQH/BAwwCgYIKwYB
+# BQUHAwgwDgYDVR0PAQH/BAQDAgeAMA0GCSqGSIb3DQEBCwUAA4ICAQA5I03kykuL
+# K6ebzrp+tYiLSF1rMo0uBGndZk9+FiA8Lcr8M0zMuWJhBQCnpa2CiUitq2K9eM4b
+# WUiNrIb2vp7DgfWfldl0N8nXYMuOilqnl7WJT9iTR660/J86J699uwjNOT8bnX66
+# JQmTvvadXNq7qEjYobIYEk68BsBUVHSDymlnAuCFPjPeaQZmOr87hn89yZUa2Mam
+# zZMK0jitmM81bw7hz/holGZhD811b3UlGs5dGnJetMpQ97eQ3w3nqOmX2Si0uF29
+# 3z1Fs6wk1/ZfOpsBXteNXhxoKCUDZu3MPFzJ9/BeEu70cxTd0thMAj3WBM1QXsED
+# 2rUS9KUIoqU3w3XRjiJTSfIiR+lHFjIBtHKrlA9g8kcYDRPLQ8PzdoK3v1FrQh0M
+# gxK7BeWlSfIjLHCsPKWB84bLKxYHBD+Ozbj1upA5g92nI52BF7y1d0auAOgF65U4
+# r5xEKVemKY1jCvrWhnb+Q8zNWvNFRgyQFd71ap1J7OHy3K266VhhxEr3mqKEXSKt
+# Czr9Y5AmW1Bfv2XMVcT0UWWf0yLHRqz4Lgc/N35LRsE3cDddFE7AC/TXogK5PyFj
+# UifJbuPBWY346RDXN6LroutTlG0DPSdPHHk54/KOdNoi1NJjg4a4ZTVJdofj0lI/
+# e3zIZgD++ittbhWd54PvbUWDBolOgcWQ4jCCB3EwggVZoAMCAQICEzMAAAAVxedr
+# ngKbSZkAAAAAABUwDQYJKoZIhvcNAQELBQAwgYgxCzAJBgNVBAYTAlVTMRMwEQYD
+# VQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYDVQQKExVNaWNy
+# b3NvZnQgQ29ycG9yYXRpb24xMjAwBgNVBAMTKU1pY3Jvc29mdCBSb290IENlcnRp
+# ZmljYXRlIEF1dGhvcml0eSAyMDEwMB4XDTIxMDkzMDE4MjIyNVoXDTMwMDkzMDE4
+# MzIyNVowfDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAOBgNV
 # BAcTB1JlZG1vbmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjEmMCQG
-# A1UEAxMdTWljcm9zb2Z0IFRpbWUtU3RhbXAgUENBIDIwMTAwHhcNMjIxMTA0MTkw
-# MTM0WhcNMjQwMjAyMTkwMTM0WjCByjELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldh
-# c2hpbmd0b24xEDAOBgNVBAcTB1JlZG1vbmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBD
-# b3Jwb3JhdGlvbjElMCMGA1UECxMcTWljcm9zb2Z0IEFtZXJpY2EgT3BlcmF0aW9u
-# czEmMCQGA1UECxMdVGhhbGVzIFRTUyBFU046M0JCRC1FMzM4LUU5QTExJTAjBgNV
-# BAMTHE1pY3Jvc29mdCBUaW1lLVN0YW1wIFNlcnZpY2UwggIiMA0GCSqGSIb3DQEB
-# AQUAA4ICDwAwggIKAoICAQDvvSI6vq/geTWbdJmP7UFH+K6h+/5/p5VvsdzbVjHM
-# DOujgbqQpcXjtgCwSCtZZPWiC+nQiugWbwJ1FlN/8OVDR9s0072kIDTUonTfMfzY
-# KWaT3N72vWM8nVkloyexmYDLtWlj2Y2pf12E++dbX9nFtuIe/urDCDD1TZJPmZ9y
-# k+62wj9Cv+AsLppMjdQJjOJU9n9B9qDw1CEqSkdk7cqvmvzdzLuPPg5Y/LkzZaK1
-# a/lsknmsFNbnXxA8TMXDOrx7w/vbYJYpkkWM3x60GCwrTmAd4do32SaWlgkkvzi/
-# 0mJpfs0UmQ5GECkQVmJQhpmgvEm3ilwEPN/5YP1QCNEoKsCx4n9yTNC86f3lfg63
-# hqyc642FwJ1xBZytmjKQWYRqhiSuwPuf/icUUfAkMpRoFhlkvA+Pu7HjxLVh75wx
-# xwzF1FKO6gbiuomqkR3qDN/Pbf2/fov4u06VCF8vlydyWE1JZ2YrDVMfJ6Qf3pE2
-# 06kgTtz71Oey/VoT2GmF6Ms4nF+xdOTLDQUh2KVzQI/vPNSypoIYXaYVdHAviN9f
-# VHJXtAYoR46m8ZmpAosdVlssPfbO1bwt+/33FDbh39MjE70tF64eyfCi2f7wGwKv
-# O77/bi85wD1dyl3uQh5bjOZTGEWy/goJ+Koym1mGEwADRKoO6PbdyPXSyZdE4tSe
-# FQIDAQABo4IBNjCCATIwHQYDVR0OBBYEFHFf+UeJKEQKnWfaUxrobW4u82CUMB8G
-# A1UdIwQYMBaAFJ+nFV0AXmJdg/Tl0mWnG1M1GelyMF8GA1UdHwRYMFYwVKBSoFCG
-# Tmh0dHA6Ly93d3cubWljcm9zb2Z0LmNvbS9wa2lvcHMvY3JsL01pY3Jvc29mdCUy
-# MFRpbWUtU3RhbXAlMjBQQ0ElMjAyMDEwKDEpLmNybDBsBggrBgEFBQcBAQRgMF4w
-# XAYIKwYBBQUHMAKGUGh0dHA6Ly93d3cubWljcm9zb2Z0LmNvbS9wa2lvcHMvY2Vy
-# dHMvTWljcm9zb2Z0JTIwVGltZS1TdGFtcCUyMFBDQSUyMDIwMTAoMSkuY3J0MAwG
-# A1UdEwEB/wQCMAAwEwYDVR0lBAwwCgYIKwYBBQUHAwgwDQYJKoZIhvcNAQELBQAD
-# ggIBAAvMXvbiNe6ANTjzo8wFhHsJzpoevackOcayeSrBliaNGLbyq/pLUvLvvbPC
-# bkMjXz3OABD33GESNbq5iStflSu1W7slRA/psEEEn3xzbwUAg8grd+RA0K/avFGN
-# 9AwlJ1zCwl5Mrst3T064DmFjg9YIGAml9jvUtxpfPcVHwA08VfrNwphuBg5mt6C2
-# kO5vfg3RCFHvBz8VyZX6Dgjch1MCgwPb9Yjlmx8pPMFSf9TcClSE3Bs6XlhIL5/1
-# LUtK1tkvA/MxL58s9clRJ7tJK+yl9Kyv9UR7ShCGZpH7m9yr7swvDzrVYFWFiknt
-# MHlgFLk5E71d0htylsEXBwc+ZvyJmpIipb0mmAbvr7k1BQs9XNnvnPlbZHlmLJCS
-# 2IekzCNfY47b1nz6dPDa06xUJzDMf0ugQt52/c+NylvA7IuO2bVPhcdh3ept30Ne
-# gGM1iRKN2Lfuk2nny76shOW0so6ONAInCPUWme4FjzbkHkLS4L81gRIQqxOJwSOF
-# L/i6MFctw0YOFUGXa8cTqpj9hbiTLW9zKm9SuwbzWCm/b7z+KE7CDjBMs7teqKR4
-# iJTdlYBQCg6lOXXi151CrFsdMO94lhHc5TTIoHbHB/zsRYIBvQImKaEObJBooS9J
-# XR8tb2JXIjTBhwbhXZpU3pOtniav599qoNAP0X4ek+E/SmUDMIIHcTCCBVmgAwIB
-# AgITMwAAABXF52ueAptJmQAAAAAAFTANBgkqhkiG9w0BAQsFADCBiDELMAkGA1UE
-# BhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1JlZG1vbmQxHjAc
-# BgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjEyMDAGA1UEAxMpTWljcm9zb2Z0
-# IFJvb3QgQ2VydGlmaWNhdGUgQXV0aG9yaXR5IDIwMTAwHhcNMjEwOTMwMTgyMjI1
-# WhcNMzAwOTMwMTgzMjI1WjB8MQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGlu
-# Z3RvbjEQMA4GA1UEBxMHUmVkbW9uZDEeMBwGA1UEChMVTWljcm9zb2Z0IENvcnBv
-# cmF0aW9uMSYwJAYDVQQDEx1NaWNyb3NvZnQgVGltZS1TdGFtcCBQQ0EgMjAxMDCC
-# AiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAOThpkzntHIhC3miy9ckeb0O
-# 1YLT/e6cBwfSqWxOdcjKNVf2AX9sSuDivbk+F2Az/1xPx2b3lVNxWuJ+Slr+uDZn
-# hUYjDLWNE893MsAQGOhgfWpSg0S3po5GawcU88V29YZQ3MFEyHFcUTE3oAo4bo3t
-# 1w/YJlN8OWECesSq/XJprx2rrPY2vjUmZNqYO7oaezOtgFt+jBAcnVL+tuhiJdxq
-# D89d9P6OU8/W7IVWTe/dvI2k45GPsjksUZzpcGkNyjYtcI4xyDUoveO0hyTD4MmP
-# frVUj9z6BVWYbWg7mka97aSueik3rMvrg0XnRm7KMtXAhjBcTyziYrLNueKNiOSW
-# rAFKu75xqRdbZ2De+JKRHh09/SDPc31BmkZ1zcRfNN0Sidb9pSB9fvzZnkXftnIv
-# 231fgLrbqn427DZM9ituqBJR6L8FA6PRc6ZNN3SUHDSCD/AQ8rdHGO2n6Jl8P0zb
-# r17C89XYcz1DTsEzOUyOArxCaC4Q6oRRRuLRvWoYWmEBc8pnol7XKHYC4jMYcten
-# IPDC+hIK12NvDMk2ZItboKaDIV1fMHSRlJTYuVD5C4lh8zYGNRiER9vcG9H9stQc
-# xWv2XFJRXRLbJbqvUAV6bMURHXLvjflSxIUXk8A8FdsaN8cIFRg/eKtFtvUeh17a
-# j54WcmnGrnu3tz5q4i6tAgMBAAGjggHdMIIB2TASBgkrBgEEAYI3FQEEBQIDAQAB
-# MCMGCSsGAQQBgjcVAgQWBBQqp1L+ZMSavoKRPEY1Kc8Q/y8E7jAdBgNVHQ4EFgQU
-# n6cVXQBeYl2D9OXSZacbUzUZ6XIwXAYDVR0gBFUwUzBRBgwrBgEEAYI3TIN9AQEw
-# QTA/BggrBgEFBQcCARYzaHR0cDovL3d3dy5taWNyb3NvZnQuY29tL3BraW9wcy9E
-# b2NzL1JlcG9zaXRvcnkuaHRtMBMGA1UdJQQMMAoGCCsGAQUFBwMIMBkGCSsGAQQB
-# gjcUAgQMHgoAUwB1AGIAQwBBMAsGA1UdDwQEAwIBhjAPBgNVHRMBAf8EBTADAQH/
-# MB8GA1UdIwQYMBaAFNX2VsuP6KJcYmjRPZSQW9fOmhjEMFYGA1UdHwRPME0wS6BJ
-# oEeGRWh0dHA6Ly9jcmwubWljcm9zb2Z0LmNvbS9wa2kvY3JsL3Byb2R1Y3RzL01p
-# Y1Jvb0NlckF1dF8yMDEwLTA2LTIzLmNybDBaBggrBgEFBQcBAQROMEwwSgYIKwYB
-# BQUHMAKGPmh0dHA6Ly93d3cubWljcm9zb2Z0LmNvbS9wa2kvY2VydHMvTWljUm9v
-# Q2VyQXV0XzIwMTAtMDYtMjMuY3J0MA0GCSqGSIb3DQEBCwUAA4ICAQCdVX38Kq3h
-# LB9nATEkW+Geckv8qW/qXBS2Pk5HZHixBpOXPTEztTnXwnE2P9pkbHzQdTltuw8x
-# 5MKP+2zRoZQYIu7pZmc6U03dmLq2HnjYNi6cqYJWAAOwBb6J6Gngugnue99qb74p
-# y27YP0h1AdkY3m2CDPVtI1TkeFN1JFe53Z/zjj3G82jfZfakVqr3lbYoVSfQJL1A
-# oL8ZthISEV09J+BAljis9/kpicO8F7BUhUKz/AyeixmJ5/ALaoHCgRlCGVJ1ijbC
-# HcNhcy4sa3tuPywJeBTpkbKpW99Jo3QMvOyRgNI95ko+ZjtPu4b6MhrZlvSP9pEB
-# 9s7GdP32THJvEKt1MMU0sHrYUP4KWN1APMdUbZ1jdEgssU5HLcEUBHG/ZPkkvnNt
-# yo4JvbMBV0lUZNlz138eW0QBjloZkWsNn6Qo3GcZKCS6OEuabvshVGtqRRFHqfG3
-# rsjoiV5PndLQTHa1V1QJsWkBRH58oWFsc/4Ku+xBZj1p/cvBQUl+fpO+y/g75LcV
-# v7TOPqUxUYS8vwLBgqJ7Fx0ViY1w/ue10CgaiQuPNtq6TPmb/wrpNPgkNWcr4A24
-# 5oyZ1uEi6vAnQj0llOZ0dFtq0Z4+7X6gMTN9vMvpe784cETRkPHIqzqKOghif9lw
-# Y1NNje6CbaUFEMFxBmoQtB1VM1izoXBm8qGCAsswggI0AgEBMIH4oYHQpIHNMIHK
-# MQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMHUmVk
-# bW9uZDEeMBwGA1UEChMVTWljcm9zb2Z0IENvcnBvcmF0aW9uMSUwIwYDVQQLExxN
-# aWNyb3NvZnQgQW1lcmljYSBPcGVyYXRpb25zMSYwJAYDVQQLEx1UaGFsZXMgVFNT
-# IEVTTjozQkJELUUzMzgtRTlBMTElMCMGA1UEAxMcTWljcm9zb2Z0IFRpbWUtU3Rh
-# bXAgU2VydmljZaIjCgEBMAcGBSsOAwIaAxUALTXK5iYhW+yiRJpwmZZ7wy7ZAW2g
-# gYMwgYCkfjB8MQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4G
-# A1UEBxMHUmVkbW9uZDEeMBwGA1UEChMVTWljcm9zb2Z0IENvcnBvcmF0aW9uMSYw
-# JAYDVQQDEx1NaWNyb3NvZnQgVGltZS1TdGFtcCBQQ0EgMjAxMDANBgkqhkiG9w0B
-# AQUFAAIFAOcwduUwIhgPMjAyMjExMjkyMDE3NDFaGA8yMDIyMTEzMDIwMTc0MVow
-# dDA6BgorBgEEAYRZCgQBMSwwKjAKAgUA5zB25QIBADAHAgEAAgIN+TAHAgEAAgIR
-# 1DAKAgUA5zHIZQIBADA2BgorBgEEAYRZCgQCMSgwJjAMBgorBgEEAYRZCgMCoAow
-# CAIBAAIDB6EgoQowCAIBAAIDAYagMA0GCSqGSIb3DQEBBQUAA4GBACtLkv3nfUlo
-# zlZEkQW8zSZ61C7Y/HTNCzisSAu/jhP5IKzTxgvTHLN0MPDMNleofyEX6eTC2dTd
-# W+kqqmHmSAckrfFoyxHT/SmkOmfkWPvtVHCpulMOEL/PW6u9jkt0VkLpB1cajfxI
-# Wir6wRLHcoQsa5zhyuEtcujR03PBzm+YMYIEDTCCBAkCAQEwgZMwfDELMAkGA1UE
-# BhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1JlZG1vbmQxHjAc
-# BgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjEmMCQGA1UEAxMdTWljcm9zb2Z0
-# IFRpbWUtU3RhbXAgUENBIDIwMTACEzMAAAHGMM0u1tOhwPQAAQAAAcYwDQYJYIZI
-# AWUDBAIBBQCgggFKMBoGCSqGSIb3DQEJAzENBgsqhkiG9w0BCRABBDAvBgkqhkiG
-# 9w0BCQQxIgQgyv2+wXrnyfKaZ2uJ+P1IR6r/CWgBVhsH48ArniKf0q0wgfoGCyqG
-# SIb3DQEJEAIvMYHqMIHnMIHkMIG9BCBWMRNcVcm9mCnGJmqT8HANYDk/HDqF6FQu
-# mQWv2uOvLTCBmDCBgKR+MHwxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5n
-# dG9uMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYDVQQKExVNaWNyb3NvZnQgQ29ycG9y
-# YXRpb24xJjAkBgNVBAMTHU1pY3Jvc29mdCBUaW1lLVN0YW1wIFBDQSAyMDEwAhMz
-# AAABxjDNLtbTocD0AAEAAAHGMCIEIHrbXOJO2hDklVfy03X5RY4OZVKo5h/03iC4
-# HvOjzTpvMA0GCSqGSIb3DQEBCwUABIICAGScLLvDYsYFOeMLczGQhGvZdvOoiM3b
-# Ly+wDXiRITyEThUTrKB+0xu9kMyMRSKSYOX92eD7sXuX+W2Tq+AjhTaCZh/NYCsZ
-# oqZwAViNiUWyO4/95/s+M3sv96d8j+xwPO+ZtjdDxTRqRckiEPn0Dt+ac53ELbZ9
-# Yd+gaZJhOIEzi67cQvZu/n3BF+d9YO6Jkh4ySx6zBA3UsFSLCkPHoJDN+mjxYauA
-# +qlm1tMq/gjO1qhQy6ZP2nyQj7APhJ67QqiESSP/AeHuT9Yi/vzrEDVDDFu0j2DQ
-# OiW3ywS3mKc1mOJx16FbNFTrPc13H4V9iRuPhTsAw+0/QZn6gy6HDYQF+ccxD20T
-# iky+a/dA8eS1JaozCRiZ8xoCkHqrrY6SfaU/I+W/wsb+6n65pvtHBr0H88zLc8DO
-# 6ild2yhxanKwxxyNEElcLkaC+GRmq+fQq4v4uqtbNEG93Ob4/aFBbMRB0cy3yJtO
-# PRIva+2VXINo/Je3mgii0aBqFWWhiTMiZRCWVkxjBQ2xDQWFuseH7g5qEk4gcaEe
-# CS2r52c0M95Ji1JXN0e4kSRvxFeoef+VGoCmvfJc2Cz5Nc7pRmgfe2Pswk9hBTpI
-# kfyb9N5cRYzdm5MexA7uD39cr/bgb/qBCDWV767MGKKmuaciun2grLoYjwFQNxWT
-# Q+BDYBzFXQWd
+# A1UEAxMdTWljcm9zb2Z0IFRpbWUtU3RhbXAgUENBIDIwMTAwggIiMA0GCSqGSIb3
+# DQEBAQUAA4ICDwAwggIKAoICAQDk4aZM57RyIQt5osvXJHm9DtWC0/3unAcH0qls
+# TnXIyjVX9gF/bErg4r25PhdgM/9cT8dm95VTcVrifkpa/rg2Z4VGIwy1jRPPdzLA
+# EBjoYH1qUoNEt6aORmsHFPPFdvWGUNzBRMhxXFExN6AKOG6N7dcP2CZTfDlhAnrE
+# qv1yaa8dq6z2Nr41JmTamDu6GnszrYBbfowQHJ1S/rboYiXcag/PXfT+jlPP1uyF
+# Vk3v3byNpOORj7I5LFGc6XBpDco2LXCOMcg1KL3jtIckw+DJj361VI/c+gVVmG1o
+# O5pGve2krnopN6zL64NF50ZuyjLVwIYwXE8s4mKyzbnijYjklqwBSru+cakXW2dg
+# 3viSkR4dPf0gz3N9QZpGdc3EXzTdEonW/aUgfX782Z5F37ZyL9t9X4C626p+Nuw2
+# TPYrbqgSUei/BQOj0XOmTTd0lBw0gg/wEPK3Rxjtp+iZfD9M269ewvPV2HM9Q07B
+# MzlMjgK8QmguEOqEUUbi0b1qGFphAXPKZ6Je1yh2AuIzGHLXpyDwwvoSCtdjbwzJ
+# NmSLW6CmgyFdXzB0kZSU2LlQ+QuJYfM2BjUYhEfb3BvR/bLUHMVr9lxSUV0S2yW6
+# r1AFemzFER1y7435UsSFF5PAPBXbGjfHCBUYP3irRbb1Hode2o+eFnJpxq57t7c+
+# auIurQIDAQABo4IB3TCCAdkwEgYJKwYBBAGCNxUBBAUCAwEAATAjBgkrBgEEAYI3
+# FQIEFgQUKqdS/mTEmr6CkTxGNSnPEP8vBO4wHQYDVR0OBBYEFJ+nFV0AXmJdg/Tl
+# 0mWnG1M1GelyMFwGA1UdIARVMFMwUQYMKwYBBAGCN0yDfQEBMEEwPwYIKwYBBQUH
+# AgEWM2h0dHA6Ly93d3cubWljcm9zb2Z0LmNvbS9wa2lvcHMvRG9jcy9SZXBvc2l0
+# b3J5Lmh0bTATBgNVHSUEDDAKBggrBgEFBQcDCDAZBgkrBgEEAYI3FAIEDB4KAFMA
+# dQBiAEMAQTALBgNVHQ8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAfBgNVHSMEGDAW
+# gBTV9lbLj+iiXGJo0T2UkFvXzpoYxDBWBgNVHR8ETzBNMEugSaBHhkVodHRwOi8v
+# Y3JsLm1pY3Jvc29mdC5jb20vcGtpL2NybC9wcm9kdWN0cy9NaWNSb29DZXJBdXRf
+# MjAxMC0wNi0yMy5jcmwwWgYIKwYBBQUHAQEETjBMMEoGCCsGAQUFBzAChj5odHRw
+# Oi8vd3d3Lm1pY3Jvc29mdC5jb20vcGtpL2NlcnRzL01pY1Jvb0NlckF1dF8yMDEw
+# LTA2LTIzLmNydDANBgkqhkiG9w0BAQsFAAOCAgEAnVV9/Cqt4SwfZwExJFvhnnJL
+# /Klv6lwUtj5OR2R4sQaTlz0xM7U518JxNj/aZGx80HU5bbsPMeTCj/ts0aGUGCLu
+# 6WZnOlNN3Zi6th542DYunKmCVgADsAW+iehp4LoJ7nvfam++Kctu2D9IdQHZGN5t
+# ggz1bSNU5HhTdSRXud2f8449xvNo32X2pFaq95W2KFUn0CS9QKC/GbYSEhFdPSfg
+# QJY4rPf5KYnDvBewVIVCs/wMnosZiefwC2qBwoEZQhlSdYo2wh3DYXMuLGt7bj8s
+# CXgU6ZGyqVvfSaN0DLzskYDSPeZKPmY7T7uG+jIa2Zb0j/aRAfbOxnT99kxybxCr
+# dTDFNLB62FD+CljdQDzHVG2dY3RILLFORy3BFARxv2T5JL5zbcqOCb2zAVdJVGTZ
+# c9d/HltEAY5aGZFrDZ+kKNxnGSgkujhLmm77IVRrakURR6nxt67I6IleT53S0Ex2
+# tVdUCbFpAUR+fKFhbHP+CrvsQWY9af3LwUFJfn6Tvsv4O+S3Fb+0zj6lMVGEvL8C
+# wYKiexcdFYmNcP7ntdAoGokLjzbaukz5m/8K6TT4JDVnK+ANuOaMmdbhIurwJ0I9
+# JZTmdHRbatGePu1+oDEzfbzL6Xu/OHBE0ZDxyKs6ijoIYn/ZcGNTTY3ugm2lBRDB
+# cQZqELQdVTNYs6FwZvKhggNZMIICQQIBATCCAQGhgdmkgdYwgdMxCzAJBgNVBAYT
+# AlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQHEwdSZWRtb25kMR4wHAYD
+# VQQKExVNaWNyb3NvZnQgQ29ycG9yYXRpb24xLTArBgNVBAsTJE1pY3Jvc29mdCBJ
+# cmVsYW5kIE9wZXJhdGlvbnMgTGltaXRlZDEnMCUGA1UECxMeblNoaWVsZCBUU1Mg
+# RVNOOjRDMUEtMDVFMC1EOTQ3MSUwIwYDVQQDExxNaWNyb3NvZnQgVGltZS1TdGFt
+# cCBTZXJ2aWNloiMKAQEwBwYFKw4DAhoDFQCpE4xsxLwlxSVyc+TBEsVE9cWymaCB
+# gzCBgKR+MHwxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYD
+# VQQHEwdSZWRtb25kMR4wHAYDVQQKExVNaWNyb3NvZnQgQ29ycG9yYXRpb24xJjAk
+# BgNVBAMTHU1pY3Jvc29mdCBUaW1lLVN0YW1wIFBDQSAyMDEwMA0GCSqGSIb3DQEB
+# CwUAAgUA6q4q5jAiGA8yMDI0MTAwNzA5Mzk1MFoYDzIwMjQxMDA4MDkzOTUwWjB3
+# MD0GCisGAQQBhFkKBAExLzAtMAoCBQDqrirmAgEAMAoCAQACAgi/AgH/MAcCAQAC
+# AhRqMAoCBQDqr3xmAgEAMDYGCisGAQQBhFkKBAIxKDAmMAwGCisGAQQBhFkKAwKg
+# CjAIAgEAAgMHoSChCjAIAgEAAgMBhqAwDQYJKoZIhvcNAQELBQADggEBAHBQmuEF
+# eekEi4GSlimfBMJz1JIsg1vFlRL4LkA0IZDbx+9vnbmuYRsOUguVcq/4wbeJDvu9
+# W3m55gp6B+gFZlUOvRGdmVxXuTQ6vHATQN7xQcAPwdICpLa1G4X8rcZS4KsONdWq
+# u867oYql1GtKZAg4PMLF2Ea3VDO4pbIbj5Sgmw40wWZ5JCxeZTSqcliZZwDHZrTf
+# cGV09gfYS8P+LIvRexLMgCEazQwa4x+axToFc2Luvfxd+L4srLaNq4X3dLITh6Hc
+# +RlaahFGZesX1K3JTHpNyhhj9kUKw5PqX3vgNUFRqfD9Kue6C8Lz/Plv+qXv/9H2
+# 9+8AxteN0xCx1gYxggQNMIIECQIBATCBkzB8MQswCQYDVQQGEwJVUzETMBEGA1UE
+# CBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMHUmVkbW9uZDEeMBwGA1UEChMVTWljcm9z
+# b2Z0IENvcnBvcmF0aW9uMSYwJAYDVQQDEx1NaWNyb3NvZnQgVGltZS1TdGFtcCBQ
+# Q0EgMjAxMAITMwAAAf8SOHz3wWXWoQABAAAB/zANBglghkgBZQMEAgEFAKCCAUow
+# GgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMC8GCSqGSIb3DQEJBDEiBCAt3D1y
+# DkziX05f5tbHinj6sCDrHCR6ldDQx87WQY0+bDCB+gYLKoZIhvcNAQkQAi8xgeow
+# gecwgeQwgb0EIOQy777JAndprJwi4xPq8Dsk24xpU4jeoONIRXy6nKf9MIGYMIGA
+# pH4wfDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcT
+# B1JlZG1vbmQxHjAcBgNVBAoTFU1pY3Jvc29mdCBDb3Jwb3JhdGlvbjEmMCQGA1UE
+# AxMdTWljcm9zb2Z0IFRpbWUtU3RhbXAgUENBIDIwMTACEzMAAAH/Ejh898Fl1qEA
+# AQAAAf8wIgQgpOtgRPnfPcta+K4rjV4435LsNRLCzLnuWvu7OV16NbgwDQYJKoZI
+# hvcNAQELBQAEggIAh6M5P57YlJ6EqJiC+NFiSzs3tmNxGpCAIZjVIRKIgz80oIKX
+# j/m67U8c6sb+nCN9yu7wIvt+Q34K3XHQmZUrk+jBxSrRAWubYuEZQFjp9QGL5TEU
+# 6PKTgz3g09oRDW3B4a5ZJbZlisb+hZgoihUXVf3Yp40rbJ+5ufRa1JLM5ZcX/uU7
+# 7XsQ7fzFWuZZXApcu+/1sZG0wAnLHpU5Jjm+Isb8sjS6NtlpALpsySs1PLNvYw9H
+# i7+uBjexUH+v8KYnNJKd8KFbl1OG+ElZgHryIj2zZyW1J6MUBEoQMFZVX8FsU2hn
+# ZZItVinYKghRWCznLqM9zbIOTfMG56id0qAiyaV+KLu/XcYgKDX+9QZqbovCn3JY
+# dwoe1jJEoCOvsmx9yOGXPWNXASjju2Z38IK0vDHb6asVmyLxNcKtb9GpuumCbcwB
+# PW6LdEopOSie8g/aMl96tw37cIkTze7Rhh0TFOW43VADJfsoNQErZ09s/TfNBBog
+# MTuj632zdlp/e7psfFRw8m7bWJv46XUPtKyBQos0o6ajMUyyW8ha+oFBOxmcJcji
+# 1sNvQ2JVF6UuH4CBufeKOG1fls+uvCFG7wde15za7raeftbjwHsJNzIR65GmBDtv
+# 3i+CyqLsiZ+tOUE29E0CglzzcJ98/FIgRCoyCCrovyQGABQs0aKqi24t11A=
 # SIG # End signature block
